@@ -133,7 +133,7 @@ local check_update = function()
                     sendMJHelperMessage("Скрипт обновлён до последней версии!")
                 end
             else
-                sendMJHelperMessage("Ошибка при проверке обновлении скрипта!")
+                sendMJHelperMessage("Ошибка при проверке обновления скрипта!")
             end
         end
     )
