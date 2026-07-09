@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("1.0.0")
+script_version("1.1.0")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -300,6 +300,114 @@ imgui.CenterColumnText = function(text)
     imgui.Text(text)
 end
 
+local bringVec4To = function(from, to, start_time, duration)
+    local timer = os.clock() - start_time
+
+    if timer >= 0.00 and timer <= duration then
+        local count = timer / (duration / 100)
+
+        return imgui.ImVec4(
+            from.x + (count * (to.x - from.x) / 100),
+            from.y + (count * (to.y - from.y) / 100),
+            from.z + (count * (to.z - from.z) / 100),
+            from.w + (count * (to.w - from.w) / 100)
+        ), true
+    end
+
+    return (timer > duration) and to or from, false
+end
+
+local AnimButton = function(label, size, duration)
+    if type(duration) ~= "table" then
+        duration = { 0.5, 0.25 }
+    end
+
+    local cols = {
+        default = imgui.ImVec4(imgui.GetStyle().Colors[imgui.Col.Button]),
+        hovered = imgui.ImVec4(imgui.GetStyle().Colors[imgui.Col.ButtonHovered]),
+        active  = imgui.ImVec4(imgui.GetStyle().Colors[imgui.Col.ButtonActive])
+    }
+
+    if UI_ANIMBUT == nil then
+        UI_ANIMBUT = {}
+    end
+
+    if not UI_ANIMBUT[label] then
+        UI_ANIMBUT[label] = {
+            color = cols.default,
+            clicked = { nil, nil },
+            hovered = {
+                cur = false,
+                old = false,
+                clock = nil,
+            }
+        }
+    end
+
+    local pool = UI_ANIMBUT[label]
+
+    if pool["clicked"][1] and pool["clicked"][2] then
+        if os.clock() - pool["clicked"][1] <= duration[2] then
+            pool["color"] = bringVec4To(
+                pool["color"],
+                cols.active,
+                pool["clicked"][1],
+                duration[2]
+            )
+            goto no_hovered
+        end
+
+        if os.clock() - pool["clicked"][2] <= duration[2] then
+            pool["color"] = bringVec4To(
+                pool["color"],
+                pool["hovered"]["cur"] and cols.hovered or cols.default,
+                pool["clicked"][2],
+                duration[2]
+            )
+            goto no_hovered
+        end
+    end
+
+    if pool["hovered"]["clock"] ~= nil then
+        if os.clock() - pool["hovered"]["clock"] <= duration[1] then
+            pool["color"] = bringVec4To(
+                pool["color"],
+                pool["hovered"]["cur"] and cols.hovered or cols.default,
+                pool["hovered"]["clock"],
+                duration[1]
+            )
+        else
+            pool["color"] = pool["hovered"]["cur"] and cols.hovered or cols.default
+        end
+    end
+
+    ::no_hovered::
+
+    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(pool["color"]))
+    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(pool["color"]))
+    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(pool["color"]))
+
+    local result = imgui.Button(label, size or imgui.ImVec2(0, 0))
+
+    imgui.PopStyleColor(3)
+
+    if result then
+        pool["clicked"] = {
+            os.clock(),
+            os.clock() + duration[2]
+        }
+    end
+
+    pool["hovered"]["cur"] = imgui.IsItemHovered()
+
+    if pool["hovered"]["old"] ~= pool["hovered"]["cur"] then
+        pool["hovered"]["old"] = pool["hovered"]["cur"]
+        pool["hovered"]["clock"] = os.clock()
+    end
+
+    return result
+end
+
 imgui.OnFrame(
     function() return wantedWindow[0] end,
     function()
@@ -343,7 +451,7 @@ imgui.OnFrame(
 
                                 local width = imgui.GetContentRegionAvail().x
 
-                                if imgui.Button("##" .. indexChildren, imgui.ImVec2(width, 30)) then
+                                if AnimButton("##" .. indexChildren, imgui.ImVec2(width, 30)) then
                                     wantedWindow[0] = false
                                     sampSendChat(string.format("/su %s %s %s", targetID, children.search_level,
                                         children.section))
@@ -410,7 +518,7 @@ imgui.OnFrame(
                                     imgui.Separator()
 
                                     if redactMode[0] then
-                                        if imgui.Button(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                        if AnimButton(u8("Сохранить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                             children.section = u8:decode(ffi.string(section_buffer))
                                             children.description = u8:decode(ffi.string(description_buffer))
                                             children.search_level = u8:decode(ffi.string(search_level_buffer))
@@ -420,7 +528,7 @@ imgui.OnFrame(
                                             imgui.CloseCurrentPopup()
                                         end
 
-                                        if imgui.Button(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                        if AnimButton(u8("Удалить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                             table.remove(wanted.children, indexChildren)
 
                                             if #wanted.children == 0 then
@@ -433,7 +541,7 @@ imgui.OnFrame(
                                         end
                                     end
 
-                                    if imgui.Button(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                    if AnimButton(u8("Закрыть"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                         imgui.CloseCurrentPopup()
                                     end
 
@@ -447,7 +555,7 @@ imgui.OnFrame(
                                 local name = u8(string.format("Редактирование [%s. %s] ##%s", wanted.section,
                                     wanted.description, indexWanted))
 
-                                if imgui.Button(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                if AnimButton(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                     table.insert(wanted.children, {
                                         section = "1.2",
                                         description = "Описание",
@@ -457,7 +565,7 @@ imgui.OnFrame(
                                     saveConfig()
                                 end
 
-                                if imgui.Button(u8("Изменить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                if AnimButton(u8("Изменить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                     ffi.copy(section_buffer, u8(wanted.section))
                                     ffi.copy(description_buffer, u8(wanted.description))
 
@@ -481,7 +589,7 @@ imgui.OnFrame(
 
                                     imgui.Separator()
 
-                                    if imgui.Button(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                    if AnimButton(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                         wanted.section = u8:decode(ffi.string(section_buffer))
                                         wanted.description = u8:decode(ffi.string(description_buffer))
 
@@ -490,7 +598,7 @@ imgui.OnFrame(
                                         imgui.CloseCurrentPopup()
                                     end
 
-                                    if imgui.Button(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                    if AnimButton(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                         table.remove(wanteds, indexWanted)
 
                                         saveConfig()
@@ -498,14 +606,14 @@ imgui.OnFrame(
                                         imgui.CloseCurrentPopup()
                                     end
 
-                                    if imgui.Button(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                    if AnimButton(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                         imgui.CloseCurrentPopup()
                                     end
 
                                     imgui.End()
                                 end
 
-                                if imgui.Button(u8("Удалить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                if AnimButton(u8("Удалить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                     table.remove(wanteds, indexWanted)
 
                                     saveConfig()
@@ -521,7 +629,7 @@ imgui.OnFrame(
             if redactMode[0] then
                 imgui.Separator()
 
-                if imgui.Button(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                if AnimButton(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                     table.insert(wanteds, {
                         section = "1.1 УК",
                         description = "Описание",
@@ -585,7 +693,7 @@ imgui.OnFrame(
 
                         local width = imgui.GetContentRegionAvail().x
 
-                        if imgui.Button("##" .. indexFederal, imgui.ImVec2(width, 30)) then
+                        if AnimButton("##" .. indexFederal, imgui.ImVec2(width, 30)) then
                             federalWindow[0] = false
                             sampSendChat(string.format("/gwarn %s %s", targetID, federal.section))
                         end
@@ -644,7 +752,7 @@ imgui.OnFrame(
                             imgui.Separator()
 
                             if redactMode[0] then
-                                if imgui.Button(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                if AnimButton(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                     federal.section = u8:decode(ffi.string(section_buffer))
                                     federal.description = u8:decode(ffi.string(description_buffer))
 
@@ -653,7 +761,7 @@ imgui.OnFrame(
                                     imgui.CloseCurrentPopup()
                                 end
 
-                                if imgui.Button(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                if AnimButton(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                     table.remove(federals, indexFederal)
 
                                     saveConfig()
@@ -662,7 +770,7 @@ imgui.OnFrame(
                                 end
                             end
 
-                            if imgui.Button(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                            if AnimButton(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                 imgui.CloseCurrentPopup()
                             end
 
@@ -677,7 +785,7 @@ imgui.OnFrame(
             if redactMode[0] then
                 imgui.Separator()
 
-                if imgui.Button(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                if AnimButton(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                     table.insert(federals, {
                         section = "1.1 ФП",
                         description = "Описание",
@@ -733,7 +841,7 @@ imgui.OnFrame(
 
                         local width = imgui.GetContentRegionAvail().x
 
-                        if imgui.Button("##" .. indexAdministrative, imgui.ImVec2(width, 30)) then
+                        if AnimButton("##" .. indexAdministrative, imgui.ImVec2(width, 30)) then
                             administrativeWindow[0] = false
                             sampSendChat(string.format("/writeticket %s %s %s", targetID, administrative.straf,
                                 administrative.section))
@@ -801,7 +909,7 @@ imgui.OnFrame(
                             imgui.Separator()
 
                             if redactMode[0] then
-                                if imgui.Button(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                if AnimButton(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                     administrative.section = u8:decode(ffi.string(section_buffer))
                                     administrative.description = u8:decode(ffi.string(description_buffer))
                                     administrative.straf = u8:decode(ffi.string(straf_buffer))
@@ -811,7 +919,7 @@ imgui.OnFrame(
                                     imgui.CloseCurrentPopup()
                                 end
 
-                                if imgui.Button(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                                if AnimButton(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                     table.remove(administratives, indexAdministrative)
 
                                     saveConfig()
@@ -820,7 +928,7 @@ imgui.OnFrame(
                                 end
                             end
 
-                            if imgui.Button(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                            if AnimButton(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                 imgui.CloseCurrentPopup()
                             end
 
@@ -835,7 +943,7 @@ imgui.OnFrame(
             if redactMode[0] then
                 imgui.Separator()
 
-                if imgui.Button(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                if AnimButton(u8("Добавить"), imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                     table.insert(administratives, {
                         section = "1.1 АК",
                         description = "Описание",
@@ -882,7 +990,7 @@ imgui.OnFrame(
 
                             imgui.Separator()
 
-                            if imgui.Button(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                            if AnimButton(u8 "Сохранить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                 value.title = u8:decode(ffi.string(notepad_title_buffer))
 
                                 saveConfig()
@@ -890,7 +998,7 @@ imgui.OnFrame(
                                 imgui.CloseCurrentPopup()
                             end
 
-                            if imgui.Button(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                            if AnimButton(u8 "Удалить", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                 table.remove(notepad, index)
 
                                 saveConfig()
@@ -898,7 +1006,7 @@ imgui.OnFrame(
                                 imgui.CloseCurrentPopup()
                             end
 
-                            if imgui.Button(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+                            if AnimButton(u8 "Закрыть", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                                 imgui.CloseCurrentPopup()
                             end
 
@@ -922,7 +1030,7 @@ imgui.OnFrame(
 
             imgui.Separator()
 
-            if imgui.Button("+", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
+            if AnimButton("+", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                 table.insert(notepad, {
                     title = "Заголовок",
                     input_field = "Поле ввода"
@@ -965,7 +1073,7 @@ imgui.OnFrame(
                 end
             end
 
-            if imgui.Button("/awanted", imgui.ImVec2(425, 25)) then
+            if AnimButton("/awanted", imgui.ImVec2(425, 25)) then
                 sampProcessChatInput("/awanted")
             end
 
@@ -992,7 +1100,7 @@ imgui.OnFrame(
                     imgui.SetCursorPosY(imgui.GetCursorPosY() + 4)
                     imgui.PushStyleVarVec2(imgui.StyleVar.ButtonTextAlign, imgui.ImVec2(0.5, 0.85))
 
-                    if imgui.Button(fa.MAGNIFYING_GLASS .. "##" .. indexSearch, imgui.ImVec2(65, 25)) then
+                    if AnimButton(fa.MAGNIFYING_GLASS .. "##" .. indexSearch, imgui.ImVec2(65, 25)) then
                         sampSendChat("/pursuit " .. search.id)
                     end
 
@@ -1028,7 +1136,7 @@ imgui.OnFrame(
 
             imgui.Separator()
 
-            if imgui.Button(u8("Обновить"), imgui.ImVec2(imgui.GetContentRegionAvail().x / 2, 25)) then
+            if AnimButton(u8("Обновить"), imgui.ImVec2(imgui.GetContentRegionAvail().x / 2, 25)) then
                 downloadUrlToFile(updateUrls[2],
                     thisScript().path, function(id, status)
                         if status == 6 then
@@ -1042,7 +1150,7 @@ imgui.OnFrame(
 
             imgui.SameLine()
 
-            if imgui.Button(u8("Отмена"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+            if AnimButton(u8("Отмена"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
                 updateWindow[0] = not updateWindow[0]
             end
 
@@ -1209,7 +1317,7 @@ function main()
 end
 
 addEventHandler("onWindowMessage", function(msg, wp, lp)
-    if wp == 0x1B and wantedWindow[0] or wp == 0x1B and federalWindow[0] or wp == 0x1B and administrativeWindow[0] or wp == 0x1B and notepadWindow[0] then
+    if wp == 0x1B and wantedWindow[0] or wp == 0x1B and federalWindow[0] or wp == 0x1B and administrativeWindow[0] or wp == 0x1B and notepadWindow[0] or wp == 0x1B and updateWindow[0] then
         if msg == 0x100 then
             consumeWindowMessage(true, false)
         end
@@ -1219,6 +1327,7 @@ addEventHandler("onWindowMessage", function(msg, wp, lp)
             federalWindow[0] = false
             administrativeWindow[0] = false
             notepadWindow[0] = false
+            updateWindow[0] = false
         end
     end
 end)
