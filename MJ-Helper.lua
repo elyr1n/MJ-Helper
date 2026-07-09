@@ -5,6 +5,7 @@ script_name("MJ-Helper")
 script_properties("work-in-pause")
 script_version("1.0.0")
 
+local effil = require("effil")
 local vkeys = require("vkeys")
 local sampev = require("samp.events")
 local json = require("dkjson")
@@ -132,7 +133,7 @@ local check_update = function()
                     sendMJHelperMessage("Скрипт обновлён до последней версии!")
                 end
             else
-                sendMJHelperMessage("Ошибка при проверке обновления скрипта!")
+                sendMJHelperMessage("Ошибка при проверке обновлении скрипта!")
             end
         end
     )
