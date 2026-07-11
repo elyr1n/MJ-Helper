@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("1.1.1")
+script_version("1.1.2")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -1171,20 +1171,6 @@ local registerCommandWithArgument = function(command, window)
     end)
 end
 
-local afindWithID = function(id)
-    lua_thread.create(function()
-        while true do
-            if afind then
-                sampSendChat("/find " .. id)
-            else
-                return
-            end
-
-            wait(2000)
-        end
-    end)
-end
-
 sampev.onServerMessage = function(color, text)
     local text_without_hex = text:gsub("{......}", "")
 
@@ -1252,6 +1238,16 @@ function main()
     registerCommandWithArgument("agwarn", federalWindow)
     registerCommandWithArgument("aticket", administrativeWindow)
 
+    lua_thread.create(function()
+        while true do
+            if afind then
+                sampSendChat("/find " .. targetID)
+            end
+
+            wait(2000)
+        end
+    end)
+
     sampRegisterChatCommand("afind", function(id)
         if #id == 0 then
             if afind then
@@ -1270,7 +1266,6 @@ function main()
         end
 
         afind = true
-        afindWithID(targetID)
         sendMJHelperMessage(string.format("Ищу по /find игрока с ID %d!", targetID))
     end)
 
