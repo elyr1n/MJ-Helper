@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("1.1.0")
+script_version("1.1.1")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -1176,6 +1176,8 @@ local afindWithID = function(id)
         while true do
             if afind then
                 sampSendChat("/find " .. id)
+            else
+                return
             end
 
             wait(2000)
@@ -1310,6 +1312,8 @@ function main()
 
             switchCarSiren(car, not isCarSirenOn(car))
             sendMJHelperMessage(string.format("Мигалки %s!", isCarSirenOn(car) and "включены" or "выключены"))
+        else
+            return sendMJHelperMessage("Вы должны находиться в автомобиле!")
         end
     end)
 
