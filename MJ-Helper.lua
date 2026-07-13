@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("1.1.2")
+script_version("1.1.3")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -128,7 +128,7 @@ local check_update = function()
                     update.version = version
                     update.text = text
 
-                    updateWindow[0] = not updateWindow[0]
+                    -- updateWindow[0] = not updateWindow[0]
                 else
                     sendMJHelperMessage("Скрипт обновлён до последней версии!")
                 end
@@ -1028,7 +1028,9 @@ imgui.OnFrame(
                 imgui.EndTabBar()
             end
 
-            imgui.Separator()
+            if #notepad ~= 0 then
+                imgui.Separator()
+            end
 
             if AnimButton("+", imgui.ImVec2(imgui.GetWindowSize().x - 10, 30)) then
                 table.insert(notepad, {
@@ -1137,13 +1139,12 @@ imgui.OnFrame(
             imgui.Separator()
 
             if AnimButton(u8("Обновить"), imgui.ImVec2(imgui.GetContentRegionAvail().x / 2, 25)) then
-                downloadUrlToFile(updateUrls[2],
-                    thisScript().path, function(id, status)
-                        if status == 6 then
-                            sendMJHelperMessage("Обновление успешно завершено!")
-                            sendMJHelperMessage("Скрипт перезагрузится для применения изменений!")
-                        end
-                    end)
+                downloadUrlToFile(updateUrls[2], thisScript().path, function(id, status)
+                    if status == 6 then
+                        sendMJHelperMessage("Обновление успешно завершено!")
+                        sendMJHelperMessage("Скрипт перезагрузится для применения изменений!")
+                    end
+                end)
 
                 updateWindow[0] = not updateWindow[0]
             end
@@ -1242,9 +1243,10 @@ function main()
         while true do
             if afind then
                 sampSendChat("/find " .. targetID)
+                wait(2000)
+            else
+                wait(0)
             end
-
-            wait(2000)
         end
     end)
 
