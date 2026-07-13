@@ -128,7 +128,7 @@ local check_update = function()
                     update.version = version
                     update.text = text
 
-                    -- updateWindow[0] = not updateWindow[0]
+                    updateWindow[0] = not updateWindow[0]
                 else
                     sendMJHelperMessage("Скрипт обновлён до последней версии!")
                 end
