@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("1.1.4")
+script_version("1.1.5")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -450,7 +450,7 @@ imgui.OnFrame(
                                 local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
                                 local dl = imgui.GetWindowDrawList()
 
-                                local x = { 0, width * .090, width * .950 }
+                                local x = { 0, width * 0.090, width * 0.945 }
                                 local t = { u8(children.section), u8(descriptionMenu), children.search_level .. " " .. fa.STAR }
 
                                 for i = 2, 3 do
@@ -687,7 +687,7 @@ imgui.OnFrame(
                         local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
                         local dl = imgui.GetWindowDrawList()
 
-                        local x = { 0, width * .080, width * .925 }
+                        local x = { 0, width * 0.080, width * 0.925 }
                         local t = { u8(federal.section), u8(descriptionMenu) }
 
                         for i = 2, 2 do
@@ -833,7 +833,7 @@ imgui.OnFrame(
                         local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
                         local dl = imgui.GetWindowDrawList()
 
-                        local x = { 0, width * .080, width * .875 }
+                        local x = { 0, width * 0.075, width * 0.875 }
                         local t = { u8(administrative.section), u8(descriptionMenu), "$" ..
                         tostring(administrative.straf):gsub("%D", ""):reverse():gsub("(%d%d%d)", "%1."):reverse():gsub(
                             "^%.", "") }
