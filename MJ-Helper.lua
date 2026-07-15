@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("1.1.5")
+script_version("1.1.6")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -72,6 +72,19 @@ local sendMJHelperMessage = function(text)
     end
 
     return sampAddChatMessage(string.format("[MJ-Helper]: {FFFFFF}%s", text), 0xff4f00)
+end
+
+local cefNotify = function (type, text)
+    local code = string.format('window.executeEvent(\'event.notify.initialize\', `["%s","MJ-Helper","%s",3000]`);', type, text)
+
+    local bs = raknetNewBitStream()
+    raknetBitStreamWriteInt8(bs, 17)
+    raknetBitStreamWriteInt32(bs, 0)
+    raknetBitStreamWriteInt16(bs, #code)
+    raknetBitStreamWriteInt8(bs, 0)
+    raknetBitStreamWriteString(bs, code)
+    raknetEmulPacketReceiveBitStream(220, bs)
+    raknetDeleteBitStream(bs)
 end
 
 local asyncHttpRequest = function(method, url, args, resolve, reject)
@@ -1145,6 +1158,7 @@ imgui.OnFrame(
 local registerCommandWithArgument = function(command, window)
     sampRegisterChatCommand(command, function(id)
         if #id == 0 then
+            cefNotify("error", "ID не указан!")
             return sendMJHelperMessage("ID не указан!")
         end
 
@@ -1160,6 +1174,8 @@ sampev.onServerMessage = function(color, text)
         for _, error in pairs(afind_text) do
             if text_without_hex:find(error) then
                 afind = false
+
+                cefNotify("error", "/afind прекратил свою работу из-за ошибки!")
                 sendMJHelperMessage("/afind прекратил свою работу из-за ошибки!")
             end
         end
@@ -1194,6 +1210,8 @@ end
 local hi = function()
     sendMJHelperMessage("Хелпер для МЮ инициализирован!")
     sendMJHelperMessage("В консоль SampFuncs написаны все команды для хелпера и их описание!")
+
+    cefNotify("success", "Хелпер для МЮ инициализирован!")
 
     print("/asu - умный розыск")
     print("/agwarn - умное ФП")
@@ -1236,19 +1254,24 @@ function main()
             if afind then
                 afind = false
 
+                cefNotify("error", "/afind отключён!")
                 return sendMJHelperMessage("/afind отключён!")
             end
 
+            cefNotify("error", "ID не указан!")
             return sendMJHelperMessage("ID не указан!")
         end
 
         targetID = tonumber(id)
 
         if targetID < 0 or targetID > 999 then
+            cefNotify("error", "ID должен быть от 0 до 999!")
             return sendMJHelperMessage("ID должен быть от 0 до 999!")
         end
 
         afind = true
+        
+        cefNotify("success", string.format("Ищу по /find игрока с ID %d!", targetID))
         sendMJHelperMessage(string.format("Ищу по /find игрока с ID %d!", targetID))
     end)
 
@@ -1268,6 +1291,7 @@ function main()
         lua_thread.create(function()
             search_wanted, searched, searchedWindow[0] = true, {}, true
 
+            cefNotify("info", "Составляю список преступников...")
             sendMJHelperMessage("Составляю список преступников...")
 
             for i = 1, 7 do
@@ -1278,9 +1302,11 @@ function main()
             search_wanted = false
 
             if #searched ~= 0 then
+                cefNotify("success", string.format("Найдено преступников: %s", #searched))
                 sendMJHelperMessage("Список преступников составлен!")
                 sendMJHelperMessage(string.format("Найдено преступников: %s", #searched))
             else
+                cefNotify("error", "Список преступников пуст!")
                 sendMJHelperMessage("Список преступников пуст!")
             end
         end)
@@ -1291,12 +1317,14 @@ function main()
             local car = storeCarCharIsInNoSave(PLAYER_PED)
 
             if getDriverOfCar(car) ~= PLAYER_PED then
+                cefNotify("error", "Вы должны быть водителем этого автомобиля!")
                 return sendMJHelperMessage("Вы должны быть водителем этого автомобиля!")
             end
 
             switchCarSiren(car, not isCarSirenOn(car))
             sendMJHelperMessage(string.format("Мигалки %s!", isCarSirenOn(car) and "включены" or "выключены"))
         else
+            cefNotify("error", "Вы должны находиться в автомобиле!")
             return sendMJHelperMessage("Вы должны находиться в автомобиле!")
         end
     end)
