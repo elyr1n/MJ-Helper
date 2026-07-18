@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("2.0.0.2")
+script_version("2.1.0")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -81,6 +81,9 @@ local ImItemsDepartamentFrom = imgui.new['const char*'][#item_list_departament_f
 local int_item_departament_to = imgui.new.int(0)
 local item_list_departament_to = {u8("ОГП"), u8("ГКА"), u8("ЛСПД"), u8("СФПД"), u8("ЛВПД"), u8("РКШД"), u8("СВАТ"), u8("ФБР"), u8("ЛСа"), u8("СФа"), u8("ТСР"), u8("ЛСМЦ"), u8("СФМЦ"), u8("ЛВМЦ"), u8("ЦЛ"), u8("СМИ ЛС"), u8("СМИ СФ"), u8("СМИ ЛВ")}
 local ImItemsDepartamentTo = imgui.new['const char*'][#item_list_departament_to](item_list_departament_to)
+
+local int_item_founding = imgui.new.int(0)
+local ImItemsFounding = imgui.new['const char*'][#item_list_departament_from](item_list_departament_from)
 
 local config_path = getWorkingDirectory() .. "\\config\\MJ-Helper.json"
 
@@ -1249,7 +1252,7 @@ imgui.OnFrame(
             local categories = {
                 {
                     name = "Адвокат",
-                    text = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1])),
+                    text = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
                     timer = {
                         name = "Адвокат",
                         time = 180,
@@ -1258,7 +1261,7 @@ imgui.OnFrame(
                 },
                 {
                     name = "Прокурор",
-                    text = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1])),
+                    text = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
                     timer = {
                         name = "Прокурор",
                         time = 300,
@@ -1267,7 +1270,7 @@ imgui.OnFrame(
                 },
                 {
                     name = "Начальство",
-                    text = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1])),
+                    text = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
                     timer = {
                         name = "Начальство",
                         time = 300,
@@ -1284,9 +1287,12 @@ imgui.OnFrame(
                 end
 
                 if imgui.BeginPopupModal(u8(category.name), _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoScrollbar) then
-                    imgui.SetWindowSizeVec2(imgui.ImVec2(500, 215))
+                    imgui.SetWindowSizeVec2(imgui.ImVec2(500, 262))
 
                     imgui.PushItemWidth(490)
+                    imgui.Text(u8("Нахождение:"))
+                    imgui.Combo("##selectFounding", int_item_founding, ImItemsFounding, #item_list_departament_from)
+
                     imgui.Text(u8("От:"))
                     imgui.Combo("##selectDepartamentFrom", int_item_departament_from, ImItemsDepartamentFrom, #item_list_departament_from)
 
