@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("2.1.1")
+script_version("2.1.1.1")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -1255,7 +1255,7 @@ imgui.OnFrame(
                 {
                     name = "Адвокат",
                     text_departament = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
-                    text_for_player = string.format("Адвокат вызван. Время: %s. Время на приезд, после принятия вызова: 5 минут.", time),
+                    text_for_player = string.format("Адвокат вызван. Время вызова: %s. Время на приезд, после принятия вызова: 5 минут.", time),
                     timer = {
                         name = "Адвокат",
                         time = 180,
@@ -1265,7 +1265,7 @@ imgui.OnFrame(
                 {
                     name = "Прокурор",
                     text_departament = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
-                    text_for_player = string.format("Прокурор вызван. Время: %s. Время на приезд, после принятия вызова: 10 минут.", time),
+                    text_for_player = string.format("Прокурор вызван. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
                     timer = {
                         name = "Прокурор",
                         time = 300,
@@ -1275,7 +1275,7 @@ imgui.OnFrame(
                 {
                     name = "Начальство",
                     text_departament = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
-                    text_for_player = string.format("Начальство вызвано. Время: %s. Время на приезд, после принятия вызова: 10 минут.", time),
+                    text_for_player = string.format("Начальство вызвано. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
                     timer = {
                         name = "Начальство",
                         time = 300,
@@ -1406,7 +1406,7 @@ local hi = function()
     print("/log - включить/выключить вывод сообщений в консоль")
     print("/siren - вкл/выкл сирену")
     print("/timers - настройки таймеров")
-    print("/detention - вызов адвоката, прокуроров и начальства")
+    print("/procc - вызов адвоката, прокуроров и начальства")
 end
 
 function main()
@@ -1502,7 +1502,7 @@ function main()
         timerWindow[0] = not timerWindow[0]
     end)
 
-    sampRegisterChatCommand("detention", function()
+    sampRegisterChatCommand("procc", function()
         settingsTimerWindow[0] = not settingsTimerWindow[0]
     end)
 
