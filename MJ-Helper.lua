@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("1.1.6")
+script_version("2.0.0")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -23,6 +23,10 @@ local administrativeWindow = imgui.new.bool(false)
 local notepadWindow = imgui.new.bool(false)
 local searchedWindow = imgui.new.bool(false)
 local updateWindow = imgui.new.bool(false)
+local timerWindow = imgui.new.bool(false)
+local settingsTimerWindow = imgui.new.bool(false)
+
+local timerActive = imgui.new.bool(false)
 
 local section_buffer = imgui.new.char[16]()
 local description_buffer = imgui.new.char[256]()
@@ -31,6 +35,8 @@ local straf_buffer = imgui.new.char[8]()
 local search_description_buffer = imgui.new.char[256]()
 local notepad_input_buffer = imgui.new.char[8192]()
 local notepad_title_buffer = imgui.new.char[32]()
+local timer_time_buffer = imgui.new.char[8]()
+local timer_name_buffer = imgui.new.char[128]()
 
 local redactMode = imgui.new.bool(false)
 
@@ -63,6 +69,18 @@ local update = {
     version = "",
     text = ""
 }
+
+local timers = {}
+
+local renderFont = renderCreateFont("Verdana", 10, 1 + 8)
+
+local int_item_departament_from = imgui.new.int(0)
+local item_list_departament_from = {u8("ЛСПД"), u8("СФПД"), u8("ЛВПД"), u8("ФБР"), u8("РКШД"), u8("СВАТ")}
+local ImItemsDepartamentFrom = imgui.new['const char*'][#item_list_departament_from](item_list_departament_from)
+
+local int_item_departament_to = imgui.new.int(0)
+local item_list_departament_to = {u8("ОГП"), u8("ГКА"), u8("ЛСПД"), u8("СФПД"), u8("ЛВПД"), u8("РКШД"), u8("СВАТ"), u8("ФБР"), u8("ЛСа"), u8("СФа"), u8("ТСР"), u8("ЛСМЦ"), u8("СФМЦ"), u8("ЛВМЦ"), u8("ЦЛ"), u8("СМИ ЛС"), u8("СМИ СФ"), u8("СМИ ЛВ")}
+local ImItemsDepartamentTo = imgui.new['const char*'][#item_list_departament_to](item_list_departament_to)
 
 local config_path = getWorkingDirectory() .. "\\config\\MJ-Helper.json"
 
@@ -159,7 +177,8 @@ local saveConfig = function()
         administratives = administratives,
         notepad = notepad,
         log_message = log_message,
-        settingsSearchedWindow = settingsSearchedWindow
+        settingsSearchedWindow = settingsSearchedWindow,
+        timers = timers
     }
 
     local file = io.open(config_path, "w")
@@ -187,6 +206,7 @@ local loadConfig = function()
             notepad = parsed.notepad
             log_message = parsed.log_message
             settingsSearchedWindow = parsed.settingsSearchedWindow
+            timers = parsed.timers
         end
     end
 end
@@ -413,6 +433,30 @@ local AnimButton = function(label, size, duration)
     return result
 end
 
+local drawList = function (widthOne, widthTwo, widthThree, indexOne, indexTwo, ...)
+    local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
+    local dl = imgui.GetWindowDrawList()
+
+    local x = { 0, widthOne * widthTwo, widthOne * widthThree }
+    local t = {...}
+
+    for i = indexOne, indexTwo do
+        dl:AddLine(
+            imgui.ImVec2(min.x + x[i], min.y),
+            imgui.ImVec2(min.x + x[i], max.y),
+            0x30FFFFFF
+        )
+    end
+
+    for i = 1, #t do
+        dl:AddText(
+            imgui.ImVec2(min.x + x[i] + 8, min.y + 7),
+            0xFFFFFFFF,
+            t[i]
+        )
+    end
+end
+
 imgui.OnFrame(
     function() return wantedWindow[0] end,
     function()
@@ -423,7 +467,7 @@ imgui.OnFrame(
 
         imgui.PushFont(font)
 
-        if imgui.Begin(u8("Умный розыск"), wantedWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize) then
+        if imgui.Begin(u8("Умный розыск"), wantedWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             if imgui.Checkbox(u8("Режим редактирования"), redactMode) then
                 loadConfig()
             end
@@ -460,27 +504,7 @@ imgui.OnFrame(
                                     sampSendChat(string.format("/su %s %s %s", targetID, children.search_level, children.section))
                                 end
 
-                                local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
-                                local dl = imgui.GetWindowDrawList()
-
-                                local x = { 0, width * 0.090, width * 0.945 }
-                                local t = { u8(children.section), u8(descriptionMenu), children.search_level .. " " .. fa.STAR }
-
-                                for i = 2, 3 do
-                                    dl:AddLine(
-                                        imgui.ImVec2(min.x + x[i], min.y),
-                                        imgui.ImVec2(min.x + x[i], max.y),
-                                        0x30FFFFFF
-                                    )
-                                end
-
-                                for i = 1, 3 do
-                                    dl:AddText(
-                                        imgui.ImVec2(min.x + x[i] + 8, min.y + 7),
-                                        0xFFFFFFFF,
-                                        t[i]
-                                    )
-                                end
+                                drawList(width, 0.090, 0.945, 2, 3, u8(children.section), u8(descriptionMenu), children.search_level .. " " .. fa.STAR)
 
                                 local name = u8(string.format("Редактирование [%s. %s] ##%s", children.section, descriptionPopup, indexChildren))
 
@@ -662,7 +686,7 @@ imgui.OnFrame(
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
 
         imgui.PushFont(font)
-        if imgui.Begin(u8("Умное ФП"), federalWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize) then
+        if imgui.Begin(u8("Умное ФП"), federalWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             if imgui.Checkbox(u8("Режим редактирования"), redactMode) then
                 loadConfig()
             end
@@ -682,11 +706,8 @@ imgui.OnFrame(
                     if #searchText == 0 or string.find(lower(federal.description), lower(searchText)) then
                         local descriptionMenu, descriptionPopup = federal.description, federal.description
 
-                        if #descriptionMenu > 80 then
+                        if #descriptionMenu > 80 and #descriptionPopup > 80 then
                             descriptionMenu = descriptionMenu:sub(1, 80) .. "..."
-                        end
-
-                        if #descriptionPopup > 80 then
                             descriptionPopup = descriptionPopup:sub(1, 80) .. "..."
                         end
 
@@ -697,27 +718,7 @@ imgui.OnFrame(
                             sampSendChat(string.format("/gwarn %s %s", targetID, federal.section))
                         end
 
-                        local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
-                        local dl = imgui.GetWindowDrawList()
-
-                        local x = { 0, width * 0.080, width * 0.925 }
-                        local t = { u8(federal.section), u8(descriptionMenu) }
-
-                        for i = 2, 2 do
-                            dl:AddLine(
-                                imgui.ImVec2(min.x + x[i], min.y),
-                                imgui.ImVec2(min.x + x[i], max.y),
-                                0x30FFFFFF
-                            )
-                        end
-
-                        for i = 1, 2 do
-                            dl:AddText(
-                                imgui.ImVec2(min.x + x[i] + 8, min.y + 7),
-                                0xFFFFFFFF,
-                                t[i]
-                            )
-                        end
+                        drawList(width, 0.080, 0, 2, 2, u8(federal.section), u8(descriptionMenu))
 
                         local name = u8(string.format("Редактирование [%s. %s] ##%s", federal.section, descriptionPopup, indexFederal))
 
@@ -808,7 +809,7 @@ imgui.OnFrame(
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
 
         imgui.PushFont(font)
-        if imgui.Begin(u8("Умная выдача штрафов"), administrativeWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize) then
+        if imgui.Begin(u8("Умная выдача штрафов"), administrativeWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             if imgui.Checkbox(u8("Режим редактирования"), redactMode) then
                 loadConfig()
             end
@@ -843,29 +844,7 @@ imgui.OnFrame(
                             sampSendChat(string.format("/writeticket %s %s %s", targetID, administrative.straf, administrative.section))
                         end
 
-                        local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
-                        local dl = imgui.GetWindowDrawList()
-
-                        local x = { 0, width * 0.075, width * 0.875 }
-                        local t = { u8(administrative.section), u8(descriptionMenu), "$" ..
-                        tostring(administrative.straf):gsub("%D", ""):reverse():gsub("(%d%d%d)", "%1."):reverse():gsub(
-                            "^%.", "") }
-
-                        for i = 2, 3 do
-                            dl:AddLine(
-                                imgui.ImVec2(min.x + x[i], min.y),
-                                imgui.ImVec2(min.x + x[i], max.y),
-                                0x30FFFFFF
-                            )
-                        end
-
-                        for i = 1, 3 do
-                            dl:AddText(
-                                imgui.ImVec2(min.x + x[i] + 8, min.y + 7),
-                                0xFFFFFFFF,
-                                t[i]
-                            )
-                        end
+                        drawList(width, 0.075, 0.875, 2, 3, u8(administrative.section), u8(descriptionMenu), "$" .. tostring(administrative.straf):gsub("%D", ""):reverse():gsub("(%d%d%d)", "%1."):reverse():gsub("^%.", ""))
 
                         local name = u8(string.format("Редактирование [%s. %s] ##%s", administrative.section, descriptionPopup, indexAdministrative))
 
@@ -1155,6 +1134,196 @@ imgui.OnFrame(
     end
 )
 
+imgui.OnFrame(
+    function() return timerWindow[0] end,
+    function()
+        local resX, resY = getScreenResolution()
+        local sizeX, sizeY = 300, 500
+        imgui.SetNextWindowPos(imgui.ImVec2(resX / 2, resY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+        imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
+
+        imgui.PushFont(font)
+        if imgui.Begin(u8("Таймеры"), timerWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
+            if #timers ~= 0 then
+                for index, timer in pairs(timers) do
+                    local width, name = imgui.GetContentRegionAvail().x, u8(string.format("%s ##%s", timer.name, index))
+
+                    if AnimButton("##" .. index, imgui.ImVec2(width, 30)) then
+                        timer.isActive = not timer.isActive
+
+                        saveConfig()
+
+                        cefNotify("info", string.format("Таймер %s %s!", timer.name, timer.isActive and "включен" or "отключён"))
+                        sendMJHelperMessage(string.format("Таймер \"%s\" %s!", timer.name, timer.isActive and "включен" or "отключён"))
+                    end
+
+                    drawList(width, 0.750, 0, 2, 2, u8(timer.name), os.date("!%H:%M:%S", timer.time))
+
+                    if imgui.IsItemClicked(1) then
+                        ffi.copy(timer_name_buffer, u8(timer.name))
+                        ffi.copy(timer_time_buffer, tostring(timer.time))
+                        timerActive[0] = timer.isActive
+
+                        imgui.OpenPopup(name)
+                    end
+
+                    if imgui.BeginPopupModal(name, _, imgui.WindowFlags.NoResize) then
+                        imgui.SetWindowSizeVec2(imgui.ImVec2(500, 240))
+
+                        imgui.Separator()
+
+                        imgui.Text(u8("Время (секунды):"))
+
+                        imgui.PushItemWidth(490)
+                        imgui.InputText(u8("##timer_time"), timer_time_buffer, 8)
+
+                        imgui.Separator()
+
+                        imgui.Text(u8("Название:"))
+
+                        imgui.InputText(u8("##timer_name"), timer_name_buffer, 128)
+                        imgui.PopItemWidth()
+
+                        imgui.Separator()
+
+                        if AnimButton(u8("Сохранить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+                            timer.name = u8:decode(ffi.string(timer_name_buffer))
+                            timer.time = tonumber(u8:decode(ffi.string(timer_time_buffer)))
+                            timer.isActive = timerActive[0]
+
+                            saveConfig()
+
+                            imgui.CloseCurrentPopup()
+                        end
+
+                        if AnimButton(u8("Удалить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+                            table.remove(timers, index)
+
+                            saveConfig()
+
+                            imgui.CloseCurrentPopup()
+                        end
+
+                        if AnimButton(u8("Закрыть"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+                            imgui.CloseCurrentPopup()
+                        end
+
+                        imgui.End()
+                    end
+
+                    imgui.Separator()
+                end
+            else
+                imgui.Text(u8("Таймеров нет!"))
+
+                imgui.Separator()
+            end
+
+            if AnimButton(u8("Добавить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+                table.insert(timers, {
+                    name = "Новый таймер",
+                    time = 60,
+                    isActive = false
+                })
+
+                saveConfig()
+            end
+
+            imgui.End()
+        end
+        imgui.PopFont()
+    end
+)
+
+imgui.OnFrame(
+    function() return settingsTimerWindow[0] end,
+    function()
+        local resX, resY = getScreenResolution()
+        local sizeX, sizeY = 200, 120
+        imgui.SetNextWindowPos(imgui.ImVec2(resX / 2, resY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+        imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
+        if imgui.Begin(u8("Вызов"), settingsTimerWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize) then
+            local categories = {
+                {
+                    name = "Адвокат",
+                    text = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1])),
+                    timer = {
+                        name = "Адвокат",
+                        time = 180,
+                        isActive = true
+                    },
+                },
+                {
+                    name = "Прокурор",
+                    text = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1])),
+                    timer = {
+                        name = "Прокурор",
+                        time = 300,
+                        isActive = true
+                    },
+                },
+                {
+                    name = "Начальство",
+                    text = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1])),
+                    timer = {
+                        name = "Начальство",
+                        time = 300,
+                        isActive = true
+                    },
+                },
+            }
+
+            for index, category in pairs(categories) do
+                local message_departament = string.format("/d [%s]-c.c-[%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), categories[index]["text"])
+
+                if AnimButton(u8(category.name), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+                    imgui.OpenPopup(u8(category.name))
+                end
+
+                if imgui.BeginPopupModal(u8(category.name), _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoScrollbar) then
+                    imgui.SetWindowSizeVec2(imgui.ImVec2(500, 215))
+
+                    imgui.PushItemWidth(490)
+                    imgui.Text(u8("От:"))
+                    imgui.Combo("##selectDepartamentFrom", int_item_departament_from, ImItemsDepartamentFrom, #item_list_departament_from)
+
+                    imgui.Text(u8("Кому:"))
+                    imgui.Combo("##selectDepartamentTo", int_item_departament_to, ImItemsDepartamentTo, #item_list_departament_to)
+                    imgui.PopItemWidth()
+
+                    imgui.Separator()
+
+                    imgui.CenterText(u8(message_departament))
+
+                    imgui.Separator()
+
+                    if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+                        sendMJHelperMessage(message_departament)
+
+                        table.insert(timers, category.timer)
+
+                        saveConfig()
+
+                        cefNotify("success", "Сообщение в департамент отправлено!")
+                        sendMJHelperMessage("Сообщение в департамент отправлено!")
+
+                        settingsTimerWindow[0] = not settingsTimerWindow[0]
+                        imgui.CloseCurrentPopup()
+                    end
+
+                    if AnimButton(u8("Закрыть"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
+                        imgui.CloseCurrentPopup()
+                    end
+
+                    imgui.End()
+                end
+            end
+
+            imgui.End()
+        end
+    end
+)
+
 local registerCommandWithArgument = function(command, window)
     sampRegisterChatCommand(command, function(id)
         if #id == 0 then
@@ -1208,10 +1377,10 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
 end
 
 local hi = function()
+    cefNotify("success", "Хелпер для МЮ инициализирован!")
+
     sendMJHelperMessage("Хелпер для МЮ инициализирован!")
     sendMJHelperMessage("В консоль SampFuncs написаны все команды для хелпера и их описание!")
-
-    cefNotify("success", "Хелпер для МЮ инициализирован!")
 
     print("/asu - умный розыск")
     print("/agwarn - умное ФП")
@@ -1221,6 +1390,8 @@ local hi = function()
     print("/awanted - поиск всех игроков в розыске")
     print("/log - включить/выключить вывод сообщений в консоль")
     print("/siren - вкл/выкл сирену")
+    print("/timers - настройки таймеров")
+    print("/detention - вызов адвокатов, прокуроров и начальства")
 end
 
 function main()
@@ -1249,6 +1420,31 @@ function main()
         end
     end)
 
+    lua_thread.create(function()
+        while true do
+            if #timers ~= 0 then
+                for index, timer in pairs(timers) do
+                    if timer.isActive then
+                        timer.time = timer.time - 1
+
+                        saveConfig()
+
+                        if timer.time == 0 then
+                            table.remove(timers, index)
+
+                            saveConfig()
+
+                            cefNotify("info", string.format("Таймер %s закончился!", timer.name))
+                            sendMJHelperMessage(string.format("Таймер \"%s\" закончился!", timer.name))
+                        end
+                    end
+                end
+            end
+
+            wait(1000)
+        end
+    end)
+
     sampRegisterChatCommand("afind", function(id)
         if #id == 0 then
             if afind then
@@ -1270,7 +1466,7 @@ function main()
         end
 
         afind = true
-        
+
         cefNotify("success", string.format("Ищу по /find игрока с ID %d!", targetID))
         sendMJHelperMessage(string.format("Ищу по /find игрока с ID %d!", targetID))
     end)
@@ -1285,6 +1481,14 @@ function main()
 
     sampRegisterChatCommand("bl", function()
         notepadWindow[0] = not notepadWindow[0]
+    end)
+
+    sampRegisterChatCommand("timers", function()
+        timerWindow[0] = not timerWindow[0]
+    end)
+
+    sampRegisterChatCommand("detention", function()
+        settingsTimerWindow[0] = not settingsTimerWindow[0]
     end)
 
     sampRegisterChatCommand("awanted", function()
@@ -1325,15 +1529,21 @@ function main()
             sendMJHelperMessage(string.format("Мигалки %s!", isCarSirenOn(car) and "включены" or "выключены"))
         else
             cefNotify("error", "Вы должны находиться в автомобиле!")
-            return sendMJHelperMessage("Вы должны находиться в автомобиле!")
+            sendMJHelperMessage("Вы должны находиться в автомобиле!")
         end
     end)
 
-    while true do wait(0) end
+    while true do wait(0)
+        for i, timer in pairs(timers) do
+            if timer.isActive then
+                renderFontDrawText(renderFont, string.format("%s: %s", timer.name, os.date("!%H:%M:%S", timer.time)), 55, 775 - (i + 1) * 20, 0xFFFFFFFF, false)
+            end
+        end
+    end
 end
 
 addEventHandler("onWindowMessage", function(msg, wp, lp)
-    if wp == 0x1B and wantedWindow[0] or wp == 0x1B and federalWindow[0] or wp == 0x1B and administrativeWindow[0] or wp == 0x1B and notepadWindow[0] or wp == 0x1B and updateWindow[0] then
+    if wp == 0x1B and (wantedWindow[0] or federalWindow[0] or administrativeWindow[0] or notepadWindow[0] or updateWindow[0] or timerWindow[0] or settingsTimerWindow[0]) then
         if msg == 0x100 then
             consumeWindowMessage(true, false)
         end
@@ -1344,6 +1554,8 @@ addEventHandler("onWindowMessage", function(msg, wp, lp)
             administrativeWindow[0] = false
             notepadWindow[0] = false
             updateWindow[0] = false
+            timerWindow[0] = false
+            settingsTimerWindow[0] = false
         end
     end
 end)
