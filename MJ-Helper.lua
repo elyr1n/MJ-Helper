@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("2.0.0.1")
+script_version("2.0.0.2")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -493,8 +493,8 @@ imgui.OnFrame(
                                     descriptionMenu = descriptionMenu:sub(1, 85) .. "..."
                                 end
 
-                                if #descriptionPopup > 80 then
-                                    descriptionPopup = descriptionPopup:sub(1, 80) .. "..."
+                                if #descriptionPopup > 75 then
+                                    descriptionPopup = descriptionPopup:sub(1, 75) .. "..."
                                 end
 
                                 local width = imgui.GetContentRegionAvail().x
@@ -706,9 +706,12 @@ imgui.OnFrame(
                     if #searchText == 0 or string.find(lower(federal.description), lower(searchText)) then
                         local descriptionMenu, descriptionPopup = federal.description, federal.description
 
-                        if #descriptionMenu > 80 and #descriptionPopup > 80 then
-                            descriptionMenu = descriptionMenu:sub(1, 80) .. "..."
-                            descriptionPopup = descriptionPopup:sub(1, 80) .. "..."
+                        if #descriptionMenu > 90 then
+                            descriptionMenu = descriptionMenu:sub(1, 90) .. "..."
+                        end
+
+                        if #descriptionPopup > 75 then
+                            descriptionPopup = descriptionPopup:sub(1, 75) .. "..."
                         end
 
                         local width = imgui.GetContentRegionAvail().x
