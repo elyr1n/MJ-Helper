@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("2.0.0")
+script_version("2.0.0.1")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -1298,7 +1298,7 @@ imgui.OnFrame(
                     imgui.Separator()
 
                     if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
-                        sendMJHelperMessage(message_departament)
+                        sampSendChat(message_departament)
 
                         table.insert(timers, category.timer)
 
