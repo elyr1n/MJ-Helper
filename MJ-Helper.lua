@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("2.1.0.1")
+script_version("2.1.1")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -469,7 +469,6 @@ imgui.OnFrame(
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
 
         imgui.PushFont(font)
-
         if imgui.Begin(u8("Умный розыск"), wantedWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             if imgui.Checkbox(u8("Режим редактирования"), redactMode) then
                 loadConfig()
@@ -1105,6 +1104,7 @@ imgui.OnFrame(
     function()
         local resX, resY = getScreenResolution()
         imgui.SetNextWindowPos(imgui.ImVec2(resX / 2, resY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+
         imgui.PushFont(font)
         if imgui.Begin(u8(string.format("Обновление [%s ver.]", update.version)), _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize) then
             imgui.Text(u8("Изменения:"))
@@ -1248,11 +1248,14 @@ imgui.OnFrame(
         local sizeX, sizeY = 200, 120
         imgui.SetNextWindowPos(imgui.ImVec2(resX / 2, resY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
+
         if imgui.Begin(u8("Вызов"), settingsTimerWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize) then
+            local time = os.date("%H:%M", os.time())
             local categories = {
                 {
                     name = "Адвокат",
-                    text = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                    text_departament = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                    text_for_player = string.format("Адвокат вызван. Время: %s. Время на приезд, после принятия вызова: 5 минут.", time),
                     timer = {
                         name = "Адвокат",
                         time = 180,
@@ -1261,7 +1264,8 @@ imgui.OnFrame(
                 },
                 {
                     name = "Прокурор",
-                    text = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                    text_departament = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                    text_for_player = string.format("Прокурор вызван. Время: %s. Время на приезд, после принятия вызова: 10 минут.", time),
                     timer = {
                         name = "Прокурор",
                         time = 300,
@@ -1270,7 +1274,8 @@ imgui.OnFrame(
                 },
                 {
                     name = "Начальство",
-                    text = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                    text_departament = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                    text_for_player = string.format("Начальство вызвано. Время: %s. Время на приезд, после принятия вызова: 10 минут.", time),
                     timer = {
                         name = "Начальство",
                         time = 300,
@@ -1280,7 +1285,7 @@ imgui.OnFrame(
             }
 
             for index, category in pairs(categories) do
-                local message_departament = string.format("/d [%s] - [%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), categories[index]["text"])
+                local message_departament = string.format("/d [%s] - [%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), categories[index]["text_departament"])
 
                 if AnimButton(u8(category.name), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
                     imgui.OpenPopup(u8(category.name))
@@ -1308,6 +1313,7 @@ imgui.OnFrame(
 
                     if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
                         sampSendChat(message_departament)
+                        sampSendChat(category.text_for_player)
 
                         table.insert(timers, category.timer)
 
@@ -1400,7 +1406,7 @@ local hi = function()
     print("/log - включить/выключить вывод сообщений в консоль")
     print("/siren - вкл/выкл сирену")
     print("/timers - настройки таймеров")
-    print("/detention - вызов адвокатов, прокуроров и начальства")
+    print("/detention - вызов адвоката, прокуроров и начальства")
 end
 
 function main()
