@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("2.1.0")
+script_version("2.1.0.1")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -1280,7 +1280,7 @@ imgui.OnFrame(
             }
 
             for index, category in pairs(categories) do
-                local message_departament = string.format("/d [%s]-c.c-[%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), categories[index]["text"])
+                local message_departament = string.format("/d [%s] - [%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), categories[index]["text"])
 
                 if AnimButton(u8(category.name), imgui.ImVec2(imgui.GetContentRegionAvail().x, 25)) then
                     imgui.OpenPopup(u8(category.name))
