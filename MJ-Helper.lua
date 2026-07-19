@@ -1472,7 +1472,7 @@ end
 
 function main()
     while not isSampAvailable() do wait(0) end
-    -- repeat wait(0) until sampIsLocalPlayerSpawned()
+    repeat wait(0) until sampIsLocalPlayerSpawned()
 
     loadConfig()
     saveConfig()
