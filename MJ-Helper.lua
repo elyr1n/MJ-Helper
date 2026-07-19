@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("2.1.1.1")
+script_version("2.1.2")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -25,6 +25,7 @@ local searchedWindow = imgui.new.bool(false)
 local updateWindow = imgui.new.bool(false)
 local timerWindow = imgui.new.bool(false)
 local settingsTimerWindow = imgui.new.bool(false)
+local settingsMegafonWindow = imgui.new.bool(false)
 
 local timerActive = imgui.new.bool(false)
 
@@ -37,6 +38,8 @@ local notepad_input_buffer = imgui.new.char[8192]()
 local notepad_title_buffer = imgui.new.char[32]()
 local timer_time_buffer = imgui.new.char[8]()
 local timer_name_buffer = imgui.new.char[128]()
+
+local color_palitre_megafon = imgui.new.float[3]()
 
 local redactMode = imgui.new.bool(false)
 
@@ -181,7 +184,8 @@ local saveConfig = function()
         notepad = notepad,
         log_message = log_message,
         settingsSearchedWindow = settingsSearchedWindow,
-        timers = timers
+        timers = timers,
+        color_palitre_megafon = {color_palitre_megafon[0], color_palitre_megafon[1], color_palitre_megafon[2]}
     }
 
     local file = io.open(config_path, "w")
@@ -210,12 +214,43 @@ local loadConfig = function()
             log_message = parsed.log_message
             settingsSearchedWindow = parsed.settingsSearchedWindow
             timers = parsed.timers
+
+            color_palitre_megafon[0] = parsed.color_palitre_megafon[1]
+            color_palitre_megafon[1] = parsed.color_palitre_megafon[2]
+            color_palitre_megafon[2] = parsed.color_palitre_megafon[3]
         end
     end
 end
 
 local lower = function(str)
     return str:gsub("А", "а"):gsub("Б", "б"):gsub("В", "в"):gsub("Г", "г"):gsub("Д", "д"):gsub("Е", "е"):gsub("Ё", "ё"):gsub("Ж", "ж"):gsub("З", "з"):gsub("И", "и"):gsub("Й", "й"):gsub("К", "к"):gsub("Л", "л"):gsub("М", "м"):gsub("Н", "н"):gsub("О", "о"):gsub("П", "п"):gsub("Р", "р"):gsub("С", "с"):gsub("Т", "т"):gsub("У", "у"):gsub("Ф", "ф"):gsub("Х", "х"):gsub("Ц", "ц"):gsub("Ч", "ч"):gsub("Ш", "ш"):gsub("Щ", "щ"):gsub("Ъ", "ъ"):gsub("Ы", "ы"):gsub("Ь", "ь"):gsub("Э", "э"):gsub("Ю", "ю"):gsub("Я", "я")
+end
+
+local toHEX = function(r, g, b)
+    local clamp = function(v)
+        return math.max(0, math.min(255, math.floor(v + 0.5)))
+    end
+
+    return string.format("%02X%02X%02X", clamp(r), clamp(g), clamp(b))
+end
+
+local hexToInt = function(hex)
+    local r = tonumber(hex:sub(1, 2), 16)
+    local g = tonumber(hex:sub(3, 4), 16)
+    local b = tonumber(hex:sub(5, 6), 16)
+
+    local color = bit.bor(
+        bit.lshift(r, 24),
+        bit.lshift(g, 16),
+        bit.lshift(b, 8),
+        0xFF
+    )
+
+    if color >= 0x80000000 then
+        color = color - 0x100000000
+    end
+
+    return color
 end
 
 local DarkTheme = function()
@@ -1339,6 +1374,24 @@ imgui.OnFrame(
     end
 )
 
+imgui.OnFrame(
+    function() return settingsMegafonWindow[0] end,
+    function()
+        local resX, resY = getScreenResolution()
+        local sizeX, sizeY = 300, 60
+        imgui.SetNextWindowPos(imgui.ImVec2(resX / 2, resY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+        imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
+
+        if imgui.Begin(u8("Мегафон"), settingsMegafonWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize) then
+            imgui.PushItemWidth(218)
+            if imgui.ColorEdit3(u8("Цвет текста"), color_palitre_megafon) then saveConfig() end
+            imgui.PopItemWidth()
+
+            imgui.End()
+        end
+    end
+)
+
 local registerCommandWithArgument = function(command, window)
     sampRegisterChatCommand(command, function(id)
         if #id == 0 then
@@ -1367,6 +1420,13 @@ sampev.onServerMessage = function(color, text)
 
     if search_wanted and (text_without_hex:find("Используй%: %/wanted %[уровень розыска 1%-6%]") or text_without_hex:find("Игроков с таким уровнем розыска нету!")) then
         return false
+    end
+
+    if text_without_hex:find("%[M%] (.+)") then
+        local new_color = string.format("%s", toHEX(color_palitre_megafon[0] * 255, color_palitre_megafon[1] * 255, color_palitre_megafon[2] * 255))
+        local text = text:gsub("%[M%] (.+)", string.format("{%s}%s", new_color, text))
+
+        return {hexToInt(new_color), text}
     end
 end
 
@@ -1407,11 +1467,12 @@ local hi = function()
     print("/siren - вкл/выкл сирену")
     print("/timers - настройки таймеров")
     print("/procc - вызов адвоката, прокуроров и начальства")
+    print("/megafon - настройка цвета текста мегафона")
 end
 
 function main()
     while not isSampAvailable() do wait(0) end
-    repeat wait(0) until sampIsLocalPlayerSpawned()
+    -- repeat wait(0) until sampIsLocalPlayerSpawned()
 
     loadConfig()
     saveConfig()
@@ -1506,6 +1567,10 @@ function main()
         settingsTimerWindow[0] = not settingsTimerWindow[0]
     end)
 
+    sampRegisterChatCommand("megafon", function()
+        settingsMegafonWindow[0] = not settingsMegafonWindow[0]
+    end)
+
     sampRegisterChatCommand("awanted", function()
         lua_thread.create(function()
             search_wanted, searched, searchedWindow[0] = true, {}, true
@@ -1558,7 +1623,7 @@ function main()
 end
 
 addEventHandler("onWindowMessage", function(msg, wp, lp)
-    if wp == 0x1B and (wantedWindow[0] or federalWindow[0] or administrativeWindow[0] or notepadWindow[0] or updateWindow[0] or timerWindow[0] or settingsTimerWindow[0]) then
+    if wp == 0x1B and (wantedWindow[0] or federalWindow[0] or administrativeWindow[0] or notepadWindow[0] or updateWindow[0] or timerWindow[0] or settingsTimerWindow[0] or settingsMegafonWindow[0]) then
         if msg == 0x100 then
             consumeWindowMessage(true, false)
         end
@@ -1571,6 +1636,7 @@ addEventHandler("onWindowMessage", function(msg, wp, lp)
             updateWindow[0] = false
             timerWindow[0] = false
             settingsTimerWindow[0] = false
+            settingsMegafonWindow[0] = false
         end
     end
 end)
