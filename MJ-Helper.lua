@@ -216,17 +216,17 @@ local loadConfig = function()
         local ok, parsed = pcall(json.decode, content)
 
         if ok and parsed then
-            wanteds = parsed.wanteds or {}
-            federals = parsed.federals or {}
-            administratives = parsed.administratives or {}
-            notepad = parsed.notepad or {}
-            log_message = parsed.log_message or false
+            wanteds = parsed.wanteds
+            federals = parsed.federals
+            administratives = parsed.administratives
+            notepad = parsed.notepad
+            log_message = parsed.log_message
 
             if parsed.settingsSearchedWindow then
                 settingsSearchedWindow = parsed.settingsSearchedWindow
             end
 
-            timers = parsed.timers or {}
+            timers = parsed.timers
 
             if parsed.color_palitre_megafon then
                 color_palitre_megafon[0] = parsed.color_palitre_megafon[1]
