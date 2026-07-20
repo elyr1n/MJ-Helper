@@ -121,44 +121,32 @@ local cefNotify = function(type, text)
     raknetDeleteBitStream(bs)
 end
 
-local asyncHttpRequest = function(method, url, args, resolve, reject)
-    local request_thread = effil.thread(function(method, url, args)
+local asyncHttpRequest = function (method, url, args, resolve, reject)
+    local request_thread = effil.thread(function (method, url, args)
         local requests = require("requests")
         local ok, response = pcall(requests.request, method, url, args)
-
         if ok then
             response.json, response.xml = nil, nil
             return true, response
         end
-
         return false, response
     end)(method, url, args)
 
-    if not resolve then
-        resolve = function() end
-    end
-
-    if not reject then
-        reject = function() end
-    end
+    if not resolve then resolve = function() end end
+    if not reject then reject = function() end end
 
     lua_thread.create(function()
         while true do
             local status, err = request_thread:status()
-
-            if err then 
-                return reject(err)
-            end
+            if err then return reject(err) end
 
             if status == "completed" then
                 local ok, response = request_thread:get()
-
                 if ok then
                     resolve(response)
                 else
                     reject(response)
                 end
-
                 return
             end
 
@@ -186,6 +174,8 @@ local check_update = function()
                 if version ~= thisScript().version then
                     update.version = version
                     update.text = text
+
+                    updateWindow[0] = not updateWindow[0]
                 else
                     sendMJHelperMessage("Скрипт обновлён до последней версии!")
                 end
