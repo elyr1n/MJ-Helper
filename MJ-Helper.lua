@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("3.0.0")
+script_version("3.0.0.1")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -221,18 +221,12 @@ local loadConfig = function()
             administratives = parsed.administratives
             notepad = parsed.notepad
             log_message = parsed.log_message
-
-            if parsed.settingsSearchedWindow then
-                settingsSearchedWindow = parsed.settingsSearchedWindow
-            end
-
+            settingsSearchedWindow = parsed.settingsSearchedWindow
             timers = parsed.timers
 
-            if parsed.color_palitre_megafon then
-                color_palitre_megafon[0] = parsed.color_palitre_megafon[1]
-                color_palitre_megafon[1] = parsed.color_palitre_megafon[2]
-                color_palitre_megafon[2] = parsed.color_palitre_megafon[3]
-            end
+            color_palitre_megafon[0] = parsed.color_palitre_megafon[1]
+            color_palitre_megafon[1] = parsed.color_palitre_megafon[2]
+            color_palitre_megafon[2] = parsed.color_palitre_megafon[3]
         end
     end
 end
@@ -471,7 +465,6 @@ imgui.OnFrame(
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
 
         imgui.PushFont(font)
-
         if imgui.Begin(u8("MJ-Helper"), mjHelperWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             imgui.BeginChild("SideMenu", imgui.ImVec2(160, 0), true, imgui.WindowFlags.NoScrollbar)
 
@@ -503,8 +496,7 @@ imgui.OnFrame(
                     if imgui.BeginPopupModal(u8(category.name), _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoScrollbar) then
                         imgui.SetWindowSizeVec2(imgui.ImVec2(500, 340))
 
-                        imgui.PushItemWidth(490)
-
+                        imgui.PushItemWidth(475)
                         imgui.Text(u8("Нахождение:"))
                         imgui.Combo("##selectFounding", int_item_founding, ImItemsFounding, #item_list_departament_from)
 
@@ -513,7 +505,6 @@ imgui.OnFrame(
 
                         imgui.Text(u8("Кому:"))
                         imgui.Combo("##selectDepartamentTo", int_item_departament_to, ImItemsDepartamentTo, #item_list_departament_to)
-
                         imgui.PopItemWidth()
 
                         imgui.Separator()
@@ -525,6 +516,7 @@ imgui.OnFrame(
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
                             sampSendChat(message_departament)
                             sampSendChat(category.text_for_player)
+
                             table.insert(timers, category.timer)
 
                             saveConfig()
@@ -578,9 +570,8 @@ imgui.OnFrame(
                         if imgui.BeginPopupModal(name, _, imgui.WindowFlags.NoResize) then
                             imgui.SetWindowSizeVec2(imgui.ImVec2(500, 295))
 
-                            imgui.Text(u8("Время (секунды):"))
-
                             imgui.PushItemWidth(475)
+                            imgui.Text(u8("Время (секунды):"))
                             imgui.InputText(u8("##timer_time"), timer_time_buffer, 8)
 
                             imgui.Separator()
@@ -637,7 +628,6 @@ imgui.OnFrame(
             imgui.EndChild()
             imgui.End()
         end
-
         imgui.PopFont()
         imgui.PopStyleVar()
     end
@@ -656,7 +646,6 @@ imgui.OnFrame(
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
 
         imgui.PushFont(font)
-
         if imgui.Begin(u8("Умный розыск"), wantedWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             if imgui.Checkbox(u8("Режим редактирования"), redactMode) then
                 loadConfig()
@@ -716,7 +705,6 @@ imgui.OnFrame(
                                     imgui.SetWindowSizeVec2(imgui.ImVec2(750, redactMode[0] and 490 or 405))
 
                                     imgui.PushItemWidth(725)
-
                                     imgui.Text(u8("Статья:"))
                                     imgui.InputText("##section_children_wanted", section_buffer, 16)
 
@@ -729,7 +717,6 @@ imgui.OnFrame(
 
                                     imgui.Text(u8("Уровень розыска:"))
                                     imgui.InputText("##search_level_children_wanted", search_level_buffer, 2)
-
                                     imgui.PopItemWidth()
 
                                     imgui.Separator()
@@ -792,7 +779,6 @@ imgui.OnFrame(
                                     imgui.SetWindowSizeVec2(imgui.ImVec2(500, 425))
 
                                     imgui.PushItemWidth(475)
-
                                     imgui.Text(u8("Статья:"))
                                     imgui.InputText("##section_wanted", section_buffer, 16)
 
@@ -800,7 +786,6 @@ imgui.OnFrame(
 
                                     imgui.Text(u8("Описание:"))
                                     imgui.InputTextMultiline("##description_wanted", description_buffer, 256)
-
                                     imgui.PopItemWidth()
 
                                     imgui.Separator()
@@ -879,7 +864,6 @@ imgui.OnFrame(
 
             imgui.End()
         end
-
         imgui.PopFont()
         imgui.PopStyleVar()
     end
@@ -898,7 +882,6 @@ imgui.OnFrame(
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
 
         imgui.PushFont(font)
-
         if imgui.Begin(u8("Умное ФП"), federalWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             if imgui.Checkbox(u8("Режим редактирования"), redactMode) then
                 loadConfig()
@@ -953,7 +936,6 @@ imgui.OnFrame(
                             imgui.SetWindowSizeVec2(imgui.ImVec2(750, redactMode[0] and 425 or 335))
 
                             imgui.PushItemWidth(725)
-
                             imgui.Text(u8("Статья:"))
                             imgui.InputText("##section_children_gwarn", section_buffer, 16)
 
@@ -961,7 +943,6 @@ imgui.OnFrame(
 
                             imgui.Text(u8("Описание:"))
                             imgui.InputTextMultiline("##description_children_gwarn", description_buffer, 256)
-
                             imgui.PopItemWidth()
 
                             imgui.Separator()
@@ -1023,7 +1004,6 @@ imgui.OnFrame(
 
             imgui.End()
         end
-
         imgui.PopFont()
         imgui.PopStyleVar()
     end
@@ -1097,7 +1077,6 @@ imgui.OnFrame(
                             imgui.SetWindowSizeVec2(imgui.ImVec2(800, redactMode[0] and 490 or 405))
 
                             imgui.PushItemWidth(775)
-
                             imgui.Text(u8("Статья:"))
                             imgui.InputText("##section_administrative", section_buffer, 16)
 
@@ -1110,7 +1089,6 @@ imgui.OnFrame(
 
                             imgui.Text(u8("Штраф:"))
                             imgui.InputText("##straf_administrative", straf_buffer, 8)
-
                             imgui.PopItemWidth()
 
                             imgui.Separator()
@@ -1193,7 +1171,6 @@ imgui.OnFrame(
         imgui.SetNextWindowSize(imgui.ImVec2(sizeX, sizeY), imgui.Cond.FirstUseEver)
 
         imgui.PushFont(font)
-
         if imgui.Begin(u8("Блокнот"), notepadWindow, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse) then
             imgui.BeginChild("SidePanelNotepad", imgui.ImVec2(200, 0), true, imgui.WindowFlags.NoScrollbar)
 
@@ -1283,7 +1260,6 @@ imgui.OnFrame(
 
             imgui.End()
         end
-
         imgui.PopFont()
         imgui.PopStyleVar()
     end
@@ -1378,7 +1354,6 @@ imgui.OnFrame(
         imgui.SetNextWindowPos(imgui.ImVec2(resX / 2, resY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 
         imgui.PushFont(font)
-
         if imgui.Begin(u8(string.format("Обновление [%s ver.]", update.version)), _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize) then
             imgui.Text(u8("Изменения:"))
 
@@ -1409,7 +1384,6 @@ imgui.OnFrame(
 
             imgui.End()
         end
-
         imgui.PopFont()
         imgui.PopStyleVar()
     end
@@ -1501,7 +1475,7 @@ end
 
 function main()
     while not isSampAvailable() do wait(0) end
-    repeat wait(0) until sampIsLocalPlayerSpawned()
+    -- repeat wait(0) until sampIsLocalPlayerSpawned()
 
     loadConfig()
     saveConfig()
