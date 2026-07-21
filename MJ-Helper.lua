@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("4.0.0")
+script_version("4.0.0.1")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -207,7 +207,8 @@ local saveConfig = function()
         settingsSearchedWindow = settingsSearchedWindow,
         timers = timers,
         megafon = {config.ui.palitre.megafon[0], config.ui.palitre.megafon[1], config.ui.palitre.megafon[2]},
-        autoBodyCam = config.ui.bools.autoBodyCam[0]
+        autoBodyCam = config.ui.bools.autoBodyCam[0],
+        autoTake = config.ui.bools.autoTake[0]
     }
 
     local file = io.open(config_path, "w")
@@ -241,6 +242,7 @@ local loadConfig = function()
             config.ui.palitre.megafon[2] = parsed.megafon[3]
 
             config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam
+            config.ui.bools.autoTake[0] = parsed.autoTake
         end
     end
 end
@@ -665,8 +667,8 @@ imgui.OnFrame(
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sampSendChat(message_departament)
-                            sampSendChat(category.text_for_player)
+                            sendMJHelperMessage(message_departament)
+                            sendMJHelperMessage(category.text_for_player)
 
                             table.insert(timers, category.timer)
 
@@ -1784,6 +1786,7 @@ function main()
         if sampIsLocalPlayerSpawned() then
             if not bodyCamActive and config.ui.bools.autoBodyCam[0] then
                 bodyCamActive = true
+
                 sampSendChat("/bodycamera")
             end
         end
