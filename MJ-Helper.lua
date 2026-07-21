@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("4.0.0.3")
+script_version("4.0.0.4")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -454,8 +454,6 @@ local NavButton = function (label, index, activeVar)
     end
 
     imgui.PopStyleColor(2)
-
-    imgui.Separator()
 end
 
 local HandleWindowAlpha = function (bool_val, key)
@@ -595,9 +593,13 @@ imgui.OnFrame(
             imgui.BeginChild("SideMenu", imgui.ImVec2(160, 0), true, imgui.WindowFlags.NoScrollbar)
 
             NavButton(u8"Департамент", 1, activeTab)
+            imgui.Separator()
             NavButton(u8"Мегафон", 2, activeTab)
+            imgui.Separator()
             NavButton(u8"Таймеры", 3, activeTab)
+            imgui.Separator()
             NavButton(u8"Настройки", 4, activeTab)
+            imgui.Separator()
 
             imgui.EndChild()
 
@@ -862,10 +864,10 @@ imgui.OnFrame(
                                     ffi.copy(config.ui.punishment.description, u8(children.description))
                                     ffi.copy(config.ui.punishment.level, u8(children.search_level))
 
-                                    imgui.OpenPopup(u8("Редактирование ##" .. indexChildren))
+                                    imgui.OpenPopup(u8("Редактирование ##" .. u8(children.section)))
                                 end
 
-                                if imgui.BeginPopupModal(u8("Редактирование ##" .. indexChildren), _, imgui.WindowFlags.NoResize) then
+                                if imgui.BeginPopupModal(u8("Редактирование ##" .. u8(children.section)), _, imgui.WindowFlags.NoResize) then
                                     imgui.SetWindowSizeVec2(imgui.ImVec2(750, config.ui.bools.redactMode[0] and 490 or 405))
 
                                     imgui.PushItemWidth(725)
@@ -1324,15 +1326,17 @@ imgui.OnFrame(
             imgui.BeginChild("SidePanelNotepad", imgui.ImVec2(200, 0), true, imgui.WindowFlags.NoScrollbar)
 
             for index, value in pairs(notepad) do
-                NavButton(u8(value.title), index, activeNoteTab)
+                NavButton(u8(value.title) .. "##" .. index, index, activeNoteTab)
 
                 if imgui.IsItemClicked(1) then
                     ffi.copy(config.ui.notepad.title, u8(value.title))
 
-                    imgui.OpenPopup("Редактирование")
+                    imgui.OpenPopup(u8("Редактирование ##" .. index))
                 end
 
-                if imgui.BeginPopupModal("Редактирование", _, imgui.WindowFlags.NoResize) then
+                imgui.Separator()
+
+                if imgui.BeginPopupModal(u8("Редактирование ##" .. index), _, imgui.WindowFlags.NoResize) then
                     imgui.SetWindowSizeVec2(imgui.ImVec2(500, 202))
 
                     imgui.PushItemWidth(475)
@@ -1365,10 +1369,6 @@ imgui.OnFrame(
 
                     imgui.End()
                 end
-            end
-
-            if #notepad ~= 0 then
-                imgui.Separator()
             end
 
             if AnimButton(u8("Добавить запись"), imgui.ImVec2(-1, 35)) then
