@@ -12,7 +12,6 @@ local json = require("dkjson")
 local ffi = require("ffi")
 local imgui = require("mimgui")
 local encoding = require("encoding")
-
 encoding.default = "CP1251"
 local u8 = encoding.UTF8
 
@@ -1502,7 +1501,7 @@ end
 
 function main()
     while not isSampAvailable() do wait(0) end
-    -- repeat wait(0) until sampIsLocalPlayerSpawned()
+    repeat wait(0) until sampIsLocalPlayerSpawned()
 
     loadConfig()
     saveConfig()
