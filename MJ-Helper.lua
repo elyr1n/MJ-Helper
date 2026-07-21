@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("4.0.0.2")
+script_version("4.0.0.3")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -489,9 +489,10 @@ imgui.CheckboxHint = function (text, checkbox, hint, func)
 end
 
 imgui.CheckboxRedact = function ()
-    if imgui.CheckboxHint(u8("Режим редактирования"), config.ui.bools.redactMode, u8("Включите этот режим, чтобы редактировать законодательство")) then
+    imgui.CheckboxHint(u8("Режим редактирования"), config.ui.bools.redactMode, u8("Включите этот режим, чтобы редактировать законодательство"), function ()
         loadConfig()
-    end
+        saveConfig()
+    end)
 end
 
 local showNotification = (function()
@@ -1603,6 +1604,26 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
                 })
             end
         end
+
+        return false
+    end
+
+    if dialogId == 25688 then
+        for line in text:gsub("{......}", ""):gmatch("[^\n]+") do
+            local action, nickname = line:match("%]%s*(.-)%.%s+([%w_]+)")
+
+            if action and nickname then
+                showNotification("info", u8(string.format("Предложение от: %s\nПричина: %s", nickname, action)))
+
+                sampSendDialogResponse(dialogId, 1, 0, "")
+            end
+        end
+
+        return false
+    end
+
+    if dialogId == 25689 then
+        sampSendDialogResponse(dialogId, 1, 2, "")
 
         return false
     end
