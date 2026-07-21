@@ -47,7 +47,7 @@ local config = {
         },
 
         notepad = {
-            input = imgui.new.char[8192](),
+            field = imgui.new.char[8192](),
             title = imgui.new.char[32]()
         },
 
@@ -1392,9 +1392,7 @@ imgui.OnFrame(
                 local value = notepad[activeNoteTab[0]]
                 ffi.copy(config.ui.notepad.field, u8(value.field))
 
-                local input_id = "##notepad_field_" .. tostring(activeNoteTab[0])
-
-                if imgui.InputTextMultiline(input_id, config.ui.notepad.field, 8192, imgui.ImVec2(imgui.GetContentRegionAvail().x, imgui.GetContentRegionAvail().y)) then
+                if imgui.InputTextMultiline("##notepad_field_" .. tostring(activeNoteTab[0]), config.ui.notepad.field, 8192, imgui.ImVec2(imgui.GetContentRegionAvail().x, imgui.GetContentRegionAvail().y)) then
                     value.field = u8:decode(ffi.string(config.ui.notepad.field))
 
                     saveConfig()
