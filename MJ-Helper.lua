@@ -1605,26 +1605,6 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
 
         return false
     end
-
-    if dialogId == 25688 then
-        for line in text:gsub("{......}", ""):gmatch("[^\n]+") do
-            local action, nickname = line:match("%]%s*(.-)%.%s+([%w_]+)")
-
-            if action and nickname then
-                showNotification("info", u8(string.format("Предложение от: %s\nПричина: %s", nickname, action)))
-
-                sampSendDialogResponse(dialogId, 1, 0, "")
-            end
-        end
-
-        return false
-    end
-
-    if dialogId == 25689 then
-        sampSendDialogResponse(dialogId, 1, 2, "")
-
-        return false
-    end
 end
 
 function sampev.onSendCommand(command)
