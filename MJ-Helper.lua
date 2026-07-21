@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("3.0.0.1")
+script_version("3.0.0.2")
 
 local effil = require("effil")
 local vkeys = require("vkeys")
@@ -105,7 +105,7 @@ local sendMJHelperMessage = function(text)
         return print(string.format("[MJ-Helper]: %s", text))
     end
 
-    return sampAddChatMessage(string.format("[MJ-Helper]: {FFFFFF}%s", text), 0xff4f00)
+    sampAddChatMessage(string.format("[MJ-Helper]: {FFFFFF}%s", text), 0xff4f00)
 end
 
 local cefNotify = function(type, text)
@@ -414,7 +414,7 @@ local drawList = function (widthOne, widthTwo, widthThree, indexOne, indexTwo, .
     local t = {...}
 
     for i = indexOne, indexTwo do
-        dl:AddLine(imgui.ImVec2(min.x + x[i], min.y), imgui.ImVec2(min.x + x[i], max.y), 0x20FFFFFF)
+        dl:AddLine(imgui.ImVec2(min.x + x[i], min.y), imgui.ImVec2(min.x + x[i], max.y), 0x20FFFFFF, 1.0)
     end
 
     for i = 1, #t do
@@ -481,9 +481,36 @@ imgui.OnFrame(
             if activeTab[0] == 1 then
                 local time = os.date("%H:%M", os.time())
                 local categories = {
-                    { name = "Адвокат", text_departament = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])), text_for_player = string.format("Адвокат вызван. Время вызова: %s. Время на приезд, после принятия вызова: 5 минут.", time), timer = { name = "Адвокат", time = 180, isActive = true }},
-                    { name = "Прокурор", text_departament = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])), text_for_player = string.format("Прокурор вызван. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time), timer = { name = "Прокурор", time = 300, isActive = true }},
-                    { name = "Начальство", text_departament = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])), text_for_player = string.format("Начальство вызвано. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time), timer = { name = "Начальство", time = 300, isActive = true }},
+                    {
+                        name = "Адвокат",
+                        text_departament = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                        text_for_player = string.format("Адвокат вызван. Время вызова: %s. Время на приезд, после принятия вызова: 5 минут.", time),
+                        timer = {
+                            name = "Адвокат",
+                            time = 180,
+                            isActive = true
+                        }
+                    },
+                    {
+                        name = "Прокурор",
+                        text_departament = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                        text_for_player = string.format("Прокурор вызван. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
+                        timer = {
+                            name = "Прокурор",
+                            time = 300,
+                            isActive = true
+                        }
+                    },
+                    {
+                        name = "Начальство",
+                        text_departament = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
+                        text_for_player = string.format("Начальство вызвано. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
+                        timer = {
+                            name = "Начальство",
+                            time = 300,
+                            isActive = true
+                        }
+                    },
                 }
 
                 for index, category in pairs(categories) do
@@ -1613,7 +1640,7 @@ function main()
 end
 
 addEventHandler("onWindowMessage", function(msg, wp, lp)
-    if wp == 0x1B and (wantedWindow[0] or federalWindow[0] or administrativeWindow[0] or notepadWindow[0] or updateWindow[0] or mjHelperWindow[0]) then
+    if wp == 0x1B and (wantedWindow[0] or federalWindow[0] or administrativeWindow[0] or notepadWindow[0] or updateWindow[0] or mjHelperWindow[0] or searchedWindow[0]) then
         if msg == 0x100 then
             consumeWindowMessage(true, false)
         end
@@ -1621,6 +1648,7 @@ addEventHandler("onWindowMessage", function(msg, wp, lp)
         if msg == 0x101 then
             wantedWindow[0] = false
             federalWindow[0] = false
+            searchedWindow[0] = false
             administrativeWindow[0] = false
             notepadWindow[0] = false
             updateWindow[0] = false
