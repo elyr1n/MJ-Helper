@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("4.0.0.1")
+script_version("4.0.0.2")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -186,7 +186,7 @@ local check_update = function()
                     update.version = version
                     update.text = text
 
-                    config.ui.window.update[0] = not config.ui.window.update[0]
+                    -- config.ui.window.update[0] = not config.ui.window.update[0]
                 else
                     sendMJHelperMessage("Скрипт обновлён до последней версии!")
                 end
@@ -611,16 +611,18 @@ imgui.OnFrame(
                         name = "Адвокат",
                         text_departament = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
                         text_for_player = string.format("Адвокат вызван. Время вызова: %s. Время на приезд, после принятия вызова: 5 минут.", time),
+                        departament_selection = 1,
                         timer = {
                             name = "Адвокат",
                             time = 180,
                             active = true
-                        }
+                        },
                     },
                     {
                         name = "Прокурор",
                         text_departament = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
                         text_for_player = string.format("Прокурор вызван. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
+                        departament_selection = 0,
                         timer = {
                             name = "Прокурор",
                             time = 300,
@@ -631,6 +633,7 @@ imgui.OnFrame(
                         name = "Начальство",
                         text_departament = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
                         text_for_player = string.format("Начальство вызвано. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
+                        departament_selection = 2,
                         timer = {
                             name = "Начальство",
                             time = 300,
@@ -643,6 +646,8 @@ imgui.OnFrame(
                     local message_departament = string.format("/d [%s] - [%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), categories[index]["text_departament"])
 
                     if AnimButton(u8(category.name), imgui.ImVec2(imgui.GetContentRegionAvail().x, 35)) then
+                        int_item_departament_to[0] = categories[index]["departament_selection"]
+
                         imgui.OpenPopup(u8(category.name))
                     end
 
@@ -667,8 +672,8 @@ imgui.OnFrame(
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sendMJHelperMessage(message_departament)
-                            sendMJHelperMessage(category.text_for_player)
+                            sampSendChat(message_departament)
+                            sampSendChat(category.text_for_player)
 
                             table.insert(timers, category.timer)
 
