@@ -186,7 +186,7 @@ local check_update = function()
                     update.version = version
                     update.text = text
 
-                    -- config.ui.window.update[0] = not config.ui.window.update[0]
+                    config.ui.window.update[0] = not config.ui.window.update[0]
                 else
                     sendMJHelperMessage("Скрипт обновлён до последней версии!")
                 end
