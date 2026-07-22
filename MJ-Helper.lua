@@ -859,8 +859,8 @@ imgui.OnFrame(
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sendMJHelperMessage(message_departament)
-                            sendMJHelperMessage(category.text_for_player)
+                            sampSendChat(message_departament)
+                            sampSendChat(category.text_for_player)
 
                             table.insert(timers, category.timer)
 
