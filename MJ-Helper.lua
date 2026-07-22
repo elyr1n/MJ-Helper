@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("4.0.0.4")
+script_version("5.0.0")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -60,7 +60,7 @@ local config = {
         palitre = {
             megafon = imgui.new.float[3]()
         }
-    }
+    },
 }
 
 local ui = {
@@ -93,6 +93,7 @@ local activeNoteTab = imgui.new.int(1)
 local searchWanted = false
 local logMessage = false
 local bodyCamActive = false
+local offerActive = false
 
 local targetID = -1
 
@@ -102,6 +103,12 @@ local administratives = {}
 local notepad = {}
 local searched = {}
 local timers = {}
+local binds = {
+    mainWindow = "[113]",
+    siren = "[48]",
+    offerAccept = "[49]",
+    offerDecline = "[48]"
+}
 
 local afind = false
 local afindErrors = {"Команда доступна с 5 ранга", "Игрок находится в каком%-то здании", "Вы не полицейский !"}
@@ -208,7 +215,8 @@ local saveConfig = function()
         timers = timers,
         megafon = {config.ui.palitre.megafon[0], config.ui.palitre.megafon[1], config.ui.palitre.megafon[2]},
         autoBodyCam = config.ui.bools.autoBodyCam[0],
-        autoTake = config.ui.bools.autoTake[0]
+        autoTake = config.ui.bools.autoTake[0],
+        binds = binds
     }
 
     local file = io.open(config_path, "w")
@@ -229,20 +237,21 @@ local loadConfig = function()
         local ok, parsed = pcall(json.decode, content)
 
         if ok and parsed then
-            wanteds = parsed.wanteds
-            federals = parsed.federals
-            administratives = parsed.administratives
-            notepad = parsed.notepad
-            logMessage = parsed.logMessage
-            settingsSearchedWindow = parsed.settingsSearchedWindow
-            timers = parsed.timers
+            wanteds = parsed.wanteds or {}
+            federals = parsed.federals or {}
+            administratives = parsed.administratives or {}
+            notepad = parsed.notepad or {}
+            logMessage = parsed.logMessage or false
+            settingsSearchedWindow = parsed.settingsSearchedWindow or {}
+            timers = parsed.timers or {}
+            binds = parsed.binds or {}
 
-            config.ui.palitre.megafon[0] = parsed.megafon[1]
-            config.ui.palitre.megafon[1] = parsed.megafon[2]
-            config.ui.palitre.megafon[2] = parsed.megafon[3]
+            config.ui.palitre.megafon[0] = parsed.megafon[1] or 1
+            config.ui.palitre.megafon[1] = parsed.megafon[2] or 1
+            config.ui.palitre.megafon[2] = parsed.megafon[3] or 0
 
-            config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam
-            config.ui.bools.autoTake[0] = parsed.autoTake
+            config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam or false
+            config.ui.bools.autoTake[0] = parsed.autoTake or false
         end
     end
 end
@@ -271,6 +280,36 @@ local hexToInt = function(hex)
     end
 
     return color
+end
+
+local sampGetPlayerIdByNickname = function (nick)
+    local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+
+    if tostring(nick) == sampGetPlayerNickname(myid) then
+        return myid
+    end
+
+    for i = 0, 1000 do
+        if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == tostring(nick) then
+            return i
+        end
+    end
+end
+
+local keyNames = function (keys)
+    if #keys == 1 then
+        return vkeys.id_to_name(keys[1])
+    elseif #keys > 1 then
+        local keysNames = {}
+
+        for _, id in ipairs(keys) do
+            table.insert(keysNames, vkeys.id_to_name(id))
+        end
+
+        return table.concat(keysNames, " + ")
+    else
+        return "Нет"
+    end
 end
 
 local DarkTheme = function()
@@ -484,6 +523,8 @@ imgui.CheckboxHint = function (text, checkbox, hint, func)
         imgui.PopTextWrapPos()
         imgui.EndTooltip()
     end
+
+    imgui.Separator()
 end
 
 imgui.CheckboxRedact = function ()
@@ -575,6 +616,149 @@ local showNotification = (function()
         notif.show = true
     end
 end)()
+
+local OfferMenu = (function()
+    local offer = {
+        show = false,
+        alpha = 0,
+        title = "",
+        subtitle = "",
+        onAccept = nil,
+        onDecline = nil,
+        onTime = nil,
+        timer = 0,
+        bindAccept = {},
+        bindDecline = {}
+    }
+
+    imgui.OnFrame(function() return offer.show or offer.alpha > 0.001 end, function(self)
+        self.HideCursor = true
+
+        if offer.show and os.clock() > offer.timer then
+            if offer.onTime then
+                offer.onTime()
+            end
+
+            offer.show = false
+        end
+
+        local targetAlpha = offer.show and 1.0 or 0.0
+        offer.alpha = offer.alpha + (targetAlpha - offer.alpha) * math.min(imgui.GetIO().DeltaTime * 12.0, 1.0)
+
+        local width, height = 360.0, 110.0
+        local posX = (imgui.GetIO().DisplaySize.x - width) / 2
+        local posY = imgui.GetIO().DisplaySize.y * 0.825 - 45.0 * offer.alpha
+
+        imgui.SetNextWindowPos(imgui.ImVec2(posX, posY), imgui.Cond.Always)
+        imgui.SetNextWindowSize(imgui.ImVec2(width, height), imgui.Cond.Always)
+
+        imgui.PushStyleVarFloat(imgui.StyleVar.Alpha, offer.alpha)
+        imgui.PushStyleVarFloat(imgui.StyleVar.WindowRounding, 10.0)
+        imgui.PushStyleColor(imgui.Col.WindowBg, imgui.ImVec4(0.06, 0.06, 0.06, 0.9))
+
+        imgui.PushFont(font)
+        if imgui.Begin("##OfferMenuWindow", _, imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoSavedSettings) then
+            local dl, p = imgui.GetWindowDrawList(), imgui.GetWindowPos()
+
+            local pId = sampGetPlayerIdByNickname(offer.title)
+            local getPlayerID = pId and tostring(pId)
+            local iconSize = imgui.CalcTextSize(getPlayerID)
+            local progress = 0.0
+
+            if offer.show then
+                local totalTime = 10.0
+                local timeLeft = offer.timer - os.clock()
+
+                progress = timeLeft / totalTime
+            end
+
+            progress = math.max(0.0, math.min(1.0, progress))
+
+            dl:AddRectFilled(imgui.ImVec2(p.x + 12, p.y + 12), imgui.ImVec2(p.x + 52, p.y + 52), 0xFFFFFFFF, 8.0)
+            dl:AddText(imgui.ImVec2(p.x + 32 - iconSize.x / 2, p.y + 32 - iconSize.y / 2), 0xFF000000, getPlayerID)
+
+            dl:AddRectFilled(
+                imgui.ImVec2(p.x + 12, p.y + 62),
+                imgui.ImVec2(p.x + 12 + (width - 24) * progress, p.y + 64),
+                0xFF421CE1
+            )
+
+            imgui.SetCursorPos(imgui.ImVec2(64, 15))
+            imgui.TextColored(imgui.ImVec4(1, 1, 1, 0.95), u8(offer.title))
+            imgui.SetCursorPos(imgui.ImVec2(64, 31))
+            imgui.TextColored(imgui.ImVec4(0.65, 0.65, 0.65, 1.0), u8(offer.subtitle))
+
+            local drawButton = function (x, key, text)
+                local btnWidth, btnHeight = 162.0, 26.0
+                local keySize, textSize = imgui.CalcTextSize(key), imgui.CalcTextSize(text)
+                local keyBoxWidth = math.max(28.0, keySize.x + 16.0)
+
+                dl:AddRectFilled(imgui.ImVec2(x, p.y + 72), imgui.ImVec2(x + btnWidth, p.y + 72 + btnHeight), 0x20FFFFFF, 6.0)
+                dl:AddRectFilled(imgui.ImVec2(x, p.y + 72), imgui.ImVec2(x + keyBoxWidth, p.y + 72 + btnHeight), 0x40FFFFFF, 6.0)
+
+                dl:AddText(imgui.ImVec2(x + (keyBoxWidth - keySize.x) / 2, p.y + 72 + (btnHeight - keySize.y) / 2), 0xFFFFFFFF, key)
+                dl:AddText(imgui.ImVec2(x + keyBoxWidth + 10, p.y + 72 + (btnHeight - textSize.y) / 2), 0xDDFFFFFF, text)
+            end
+
+            drawButton(p.x + 12, keyNames(offer.bindAccept), u8"Принять")
+            drawButton(p.x + 186, keyNames(offer.bindDecline), u8"Отказаться")
+
+            imgui.End()
+        end
+        imgui.PopFont()
+        imgui.PopStyleColor(1)
+        imgui.PopStyleVar(2)
+    end)
+
+    return {
+        show = function(title, subtitle, bindA, bindD, onA, onD, onT)
+            offer.title = title
+            offer.subtitle = subtitle
+            offer.bindAccept = bindA
+            offer.bindDecline = bindD
+            offer.onAccept = onA
+            offer.onDecline = onD
+            offer.onTime = onT
+            offer.timer = os.clock() + 10
+            offer.show = true
+        end,
+
+        triggerAccept = function()
+            if offer.show and offer.alpha > 0.5 then
+                if offer.onAccept then
+                    offer.onAccept()
+                end
+
+                offer.show = false
+            end
+        end,
+
+        triggerDecline = function()
+            if offer.show and offer.alpha > 0.5 then
+                if offer.onDecline then
+                    offer.onDecline()
+                end
+
+                offer.show = false
+            end
+        end
+    }
+end)()
+
+local showHotkey = function (key, text)
+    if hotkey.ShowHotKey(key) then
+        binds[key] = encodeJson(hotkey.GetHotKey(key))
+
+        saveConfig()
+    end
+
+    imgui.SameLine()
+
+    imgui.SetCursorPosX(imgui.GetCursorPosX() - 2.5)
+    imgui.Text(u8("- " .. text))
+
+    imgui.Separator()
+end
 
 imgui.OnFrame(
     function() return config.ui.window.main[0] or ui.main > 0.0 end,
@@ -675,8 +859,8 @@ imgui.OnFrame(
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sampSendChat(message_departament)
-                            sampSendChat(category.text_for_player)
+                            sendMJHelperMessage(message_departament)
+                            sendMJHelperMessage(category.text_for_player)
 
                             table.insert(timers, category.timer)
 
@@ -785,13 +969,30 @@ imgui.OnFrame(
                     saveConfig()
                 end
             elseif activeTab[0] == 4 then
-                imgui.CheckboxHint(u8("Авто боди-камера"), config.ui.bools.autoBodyCam, u8("При спавне боди-камера будет включаться автоматически"), function ()
-                    saveConfig()
-                end)
+                if imgui.BeginTabBar("SettingsTabs") then
+                    if imgui.BeginTabItem(u8("Основные")) then
+                        imgui.CheckboxHint(u8("Авто боди-камера"), config.ui.bools.autoBodyCam, u8("При спавне боди-камера будет включаться автоматически"), function ()
+                            saveConfig()
+                        end)
 
-                imgui.CheckboxHint(u8("Авто /take при изъятии"), config.ui.bools.autoTake, u8("При изъятии чего-либо незаконного у игрока - /take будет отправлен автоматически"), function ()
-                    saveConfig()
-                end)
+                        imgui.CheckboxHint(u8("Авто /take при изъятии"), config.ui.bools.autoTake, u8("При изъятии чего-либо незаконного у игрока - /take будет отправлен автоматически"), function ()
+                            saveConfig()
+                        end)
+
+                        imgui.EndTabItem()
+                    end
+
+                    if imgui.BeginTabItem(u8("Бинды")) then
+                        showHotkey("mainWindow", "Главное меню")
+                        showHotkey("siren", "Сирена")
+                        showHotkey("offerAccept", "Принять /offer")
+                        showHotkey("offerDecline", "Отказаться от /offer")
+
+                        imgui.EndTabItem()
+                    end
+
+                    imgui.EndTabBar()
+                end
             end
 
             imgui.EndChild()
@@ -854,15 +1055,15 @@ imgui.OnFrame(
                                 if AnimButton("##" .. indexChildren, imgui.ImVec2(width, 35)) then
                                     config.ui.window.wanted[0] = false
 
-                                    sampSendChat(string.format("/su %s %s %s", targetID, children.search_level, children.section))
+                                    sampSendChat(string.format("/su %s %s %s", targetID, children.level, children.section))
                                 end
 
-                                drawList(width, 0.0925, 0.9425, 2, 3, u8(children.section), u8(descriptionMenu), children.search_level .. " " .. fa.STAR)
+                                drawList(width, 0.0925, 0.9425, 2, 3, u8(children.section), u8(descriptionMenu), children.level .. " " .. fa.STAR)
 
                                 if imgui.IsItemClicked(1) then
                                     ffi.copy(config.ui.punishment.section, u8(children.section))
                                     ffi.copy(config.ui.punishment.description, u8(children.description))
-                                    ffi.copy(config.ui.punishment.level, u8(children.search_level))
+                                    ffi.copy(config.ui.punishment.level, u8(children.level))
 
                                     imgui.OpenPopup(u8("Редактирование ##" .. u8(children.section)))
                                 end
@@ -1069,7 +1270,7 @@ imgui.OnFrame(
                     RenderAnimated("fed_item_" .. indexFederal, is_match, alpha, function()
                         local descriptionMenu= federal.description
 
-                        if #descriptionMenu > 60 then
+                        if #descriptionMenu > 90 then
                             descriptionMenu = descriptionMenu:sub(1, 90) .. "..."
                         end
 
@@ -1582,6 +1783,12 @@ sampev.onServerMessage = function(color, text)
     if bodyCamActive and text:find("Бодикамера уже активирована") then
         return false
     end
+
+    if not offerActive and text:find("Вам поступило предложение от") then
+        offerActive = true
+
+        sampSendChat("/offer")
+    end
 end
 
 sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
@@ -1604,6 +1811,44 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
         end
 
         return false
+    end
+
+    if offerActive then
+        if dialogId == 25688 then
+            for line in text:gsub("{......}", ""):gmatch("[^\n]+") do
+                local action, nickname = line:match("%[%d+%]%s+(.+)%.%s+(%w+_%w+)")
+
+                if action and nickname then
+                    OfferMenu.show(
+                        nickname,
+                        action,
+                        decodeJson(binds.offerAccept),
+                        decodeJson(binds.offerDecline),
+                        function()
+                            sampSendDialogResponse(25688, 1, 0, "")
+                        end,
+                        function()
+                            offerActive = false
+                            sampSendDialogResponse(25688, 1, 1, "")
+                        end,
+                        function()
+                            offerActive = false
+                            sampSendDialogResponse(25688, 1, 1, "")
+                        end
+                    )
+                end
+            end
+
+            return false
+        end
+
+        if dialogId == 25689 then
+            sampSendDialogResponse(25689, 1, 2, "")
+
+            offerActive = false
+
+            return false
+        end
     end
 end
 
@@ -1643,8 +1888,28 @@ local hi = function()
 end
 
 local hotkeys = function ()
-    hotkey.RegisterHotKey("open main window", false, {113}, function ()
-        config.ui.window.main[0] = not config.ui.window.main[0]
+    hotkey.RegisterHotKey("mainWindow", false, decodeJson(binds.mainWindow), function ()
+        if not isCursorActive() then
+            config.ui.window.main[0] = not config.ui.window.main[0]
+        end
+    end)
+
+    hotkey.RegisterHotKey("siren", false, decodeJson(binds.siren), function ()
+        if not isCursorActive() then
+            sampProcessChatInput("/siren")
+        end
+    end)
+
+    hotkey.RegisterHotKey("offerAccept", false, decodeJson(binds.offerAccept), function ()
+        if not isCursorActive() then
+            OfferMenu.triggerAccept()
+        end
+    end)
+
+    hotkey.RegisterHotKey("offerDecline", false, decodeJson(binds.offerDecline), function ()
+        if not isCursorActive() then
+            OfferMenu.triggerDecline()
+        end
     end)
 end
 
