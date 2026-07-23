@@ -1884,14 +1884,10 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
 
     if offerActive then
         if dialogId == 25688 then
-            local index = 0
-
             for line in text:gsub("{......}", ""):gmatch("[^\n]+") do
                 local action, nickname = line:match("%[%d+%]%s+(.+)%.%s+(%w+_%w+)")
 
                 if action and nickname then
-                    index = index + 1
-
                     OfferMenu.show(
                         nickname,
                         action,
@@ -1935,8 +1931,6 @@ sampev.onSendDialogResponse = function(dialogId, button, listboxId, input)
 	if config.ui.bools.autoTake and dialogId == 88 and button == 1 then
 		sampSendChat("/take " .. take_id)
 	end
-
-    sendMJHelperMessage(listboxId)
 end
 
 sampev.onSendClientJoin = function () bodyCamActive = false end
@@ -1964,25 +1958,25 @@ end
 
 local hotkeys = function ()
     hotkey.RegisterHotKey("mainWindow", false, decodeJson(binds.mainWindow), function ()
-        if not sampIsCursorActive() or not sampIsDialogActive() then
+        if not sampIsCursorActive() and not sampIsDialogActive() then
             config.ui.window.main[0] = not config.ui.window.main[0]
         end
     end)
 
     hotkey.RegisterHotKey("siren", false, decodeJson(binds.siren), function ()
-        if not sampIsCursorActive() or not sampIsDialogActive() then
+        if not sampIsCursorActive() and not sampIsDialogActive() then
             sampProcessChatInput("/siren")
         end
     end)
 
     hotkey.RegisterHotKey("offerAccept", false, decodeJson(binds.offerAccept), function ()
-        if not sampIsCursorActive() or not sampIsDialogActive() then
+        if not sampIsCursorActive() and not sampIsDialogActive() then
             OfferMenu.triggerAccept()
         end
     end)
 
     hotkey.RegisterHotKey("offerDecline", false, decodeJson(binds.offerDecline), function ()
-        if not sampIsCursorActive() or not sampIsDialogActive() then
+        if not sampIsCursorActive() and not sampIsDialogActive() then
             OfferMenu.triggerDecline()
         end
     end)
