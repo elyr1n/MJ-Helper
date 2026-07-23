@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.0")
+script_version("5.0.0.1")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -1889,25 +1889,25 @@ end
 
 local hotkeys = function ()
     hotkey.RegisterHotKey("mainWindow", false, decodeJson(binds.mainWindow), function ()
-        if not isCursorActive() then
+        if not sampIsCursorActive() then
             config.ui.window.main[0] = not config.ui.window.main[0]
         end
     end)
 
     hotkey.RegisterHotKey("siren", false, decodeJson(binds.siren), function ()
-        if not isCursorActive() then
+        if not sampIsCursorActive() then
             sampProcessChatInput("/siren")
         end
     end)
 
     hotkey.RegisterHotKey("offerAccept", false, decodeJson(binds.offerAccept), function ()
-        if not isCursorActive() then
+        if not sampIsCursorActive() then
             OfferMenu.triggerAccept()
         end
     end)
 
     hotkey.RegisterHotKey("offerDecline", false, decodeJson(binds.offerDecline), function ()
-        if not isCursorActive() then
+        if not sampIsCursorActive() then
             OfferMenu.triggerDecline()
         end
     end)
