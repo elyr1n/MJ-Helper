@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.0.2")
+script_version("5.0.0.3")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -57,6 +57,11 @@ local config = {
             active = imgui.new.bool(false)
         },
 
+        departament = {
+            text_departament = imgui.new.char[256](),
+            text_for_player = imgui.new.char[256]()
+        },
+
         palitre = {
             megafon = imgui.new.float[3]()
         }
@@ -84,8 +89,9 @@ local int_item_departament_to = imgui.new.int(0)
 local item_list_departament_to = {u8("ОГП"), u8("ГКА"), u8("ЛСПД"), u8("СФПД"), u8("ЛВПД"), u8("РКШД"), u8("СВАТ"), u8("ФБР"), u8("ЛСа"), u8("СФа"), u8("ТСР"), u8("ЛСМЦ"), u8("СФМЦ"), u8("ЛВМЦ"), u8("ЦЛ"), u8("СМИ ЛС"), u8("СМИ СФ"), u8("СМИ ЛВ")}
 local ImItemsDepartamentTo = imgui.new["const char*"][#item_list_departament_to](item_list_departament_to)
 
-local int_item_founding = imgui.new.int(0)
-local ImItemsFounding = imgui.new["const char*"][#item_list_departament_from](item_list_departament_from)
+local int_item_departament_location = imgui.new.int(0)
+local item_list_departament_location = {u8("ЛСПД"), u8("СФПД"), u8("ЛВПД"), u8("ФБР"), u8("РКШД"), u8("СВАТ")}
+local ImItemsDepartamentLocation = imgui.new["const char*"][#item_list_departament_location](item_list_departament_location)
 
 local activeTab = imgui.new.int(1)
 local activeNoteTab = imgui.new.int(1)
@@ -108,6 +114,20 @@ local binds = {
     siren = "[48]",
     offerAccept = "[49]",
     offerDecline = "[48]"
+}
+local text_for_departament = {
+    {
+        text_departament = "Адвоката в допросную {departament_location}.",
+        text_for_player = "Адвокат вызван. Время вызова: {time}. Время на приезд, после принятия вызова: 5 минут.",
+    },
+    {
+        text_departament = "Прокурора в допросную {departament_location}.",
+        text_for_player = "Прокурор вызван. Время вызова: {time}. Время на приезд, после принятия вызова: 10 минут.",
+    },
+    {
+        text_departament = "Начальство в допросную {departament_location}.",
+        text_for_player = "Начальство вызвано. Время вызова: {time}. Время на приезд, после принятия вызова: 10 минут.",
+    }
 }
 
 local afind = false
@@ -216,7 +236,8 @@ local saveConfig = function()
         megafon = {config.ui.palitre.megafon[0], config.ui.palitre.megafon[1], config.ui.palitre.megafon[2]},
         autoBodyCam = config.ui.bools.autoBodyCam[0],
         autoTake = config.ui.bools.autoTake[0],
-        binds = binds
+        binds = binds,
+        text_for_departament = text_for_departament
     }
 
     local file = io.open(config_path, "w")
@@ -244,7 +265,8 @@ local loadConfig = function()
             logMessage = parsed.logMessage or false
             settingsSearchedWindow = parsed.settingsSearchedWindow or {}
             timers = parsed.timers or {}
-            binds = parsed.binds or {}
+            binds = parsed.binds
+            text_for_departament = parsed.text_for_departament
 
             config.ui.palitre.megafon[0] = parsed.megafon[1] or 1
             config.ui.palitre.megafon[1] = parsed.megafon[2] or 1
@@ -289,7 +311,7 @@ local sampGetPlayerIdByNickname = function (nick)
         return myid
     end
 
-    for i = 0, 1000 do
+    for i = 0, 999 do
         if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == tostring(nick) then
             return i
         end
@@ -661,7 +683,7 @@ local OfferMenu = (function()
         imgui.PushStyleVarFloat(imgui.StyleVar.WindowRounding, 10.0)
         imgui.PushStyleColor(imgui.Col.WindowBg, imgui.ImVec4(0.06, 0.06, 0.06, 0.9))
 
-        if imgui.Begin("##OfferMenuWindow", _, imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoSavedSettings) then
+        if imgui.Begin(u8("Предложение"), _, imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoSavedSettings) then
             local dl, p = imgui.GetWindowDrawList(), imgui.GetWindowPos()
 
             local pId = sampGetPlayerIdByNickname(offer.title)
@@ -695,8 +717,8 @@ local OfferMenu = (function()
                 dl:AddText(imgui.ImVec2(x + keyBoxWidth + 10, p.y + 72 + (btnHeight - textSize.y) / 2), 0xDDFFFFFF, text)
             end
 
-            drawButton(p.x + 12, keyNames(offer.bindAccept), u8"Принять")
-            drawButton(p.x + 24 + btnWidth, keyNames(offer.bindDecline), u8"Отказаться")
+            drawButton(p.x + 12, keyNames(offer.bindAccept), u8("Принять"))
+            drawButton(p.x + 24 + btnWidth, keyNames(offer.bindDecline), u8("Отказаться"))
 
             imgui.End()
         end
@@ -777,48 +799,59 @@ imgui.OnFrame(
             imgui.BeginChild("MainContent", imgui.ImVec2(0, 0), true, imgui.WindowFlags.NoScrollbar)
 
             if activeTab[0] == 1 then
-                local time = os.date("%H:%M", os.time())
                 local categories = {
-                    {
-                        name = "Адвокат",
-                        text_departament = string.format("Адвоката в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
-                        text_for_player = string.format("Адвокат вызван. Время вызова: %s. Время на приезд, после принятия вызова: 5 минут.", time),
-                        departament_selection = 1,
-                        timer = {
+                    departament = {
+                        {
                             name = "Адвокат",
-                            time = 180,
-                            active = true
+                            text_departament = text_for_departament[1].text_departament,
+                            text_for_player = text_for_departament[1].text_for_player,
+                            departament_selection = 1,
+                            timer = {
+                                name = "Адвокат",
+                                time = 180,
+                                active = true
+                            },
                         },
-                    },
-                    {
-                        name = "Прокурор",
-                        text_departament = string.format("Прокурора в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
-                        text_for_player = string.format("Прокурор вызван. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
-                        departament_selection = 0,
-                        timer = {
+                        {
                             name = "Прокурор",
-                            time = 300,
-                            active = true
-                        }
-                    },
-                    {
-                        name = "Начальство",
-                        text_departament = string.format("Начальство в допросную %s.", u8:decode(item_list_departament_from[int_item_founding[0] + 1])),
-                        text_for_player = string.format("Начальство вызвано. Время вызова: %s. Время на приезд, после принятия вызова: 10 минут.", time),
-                        departament_selection = 2,
-                        timer = {
+                            text_departament = text_for_departament[2].text_departament,
+                            text_for_player = text_for_departament[2].text_for_player,
+                            departament_selection = 0,
+                            timer = {
+                                name = "Прокурор",
+                                time = 300,
+                                active = true
+                            }
+                        },
+                        {
                             name = "Начальство",
-                            time = 300,
-                            active = true
+                            text_departament = text_for_departament[3].text_departament,
+                            text_for_player = text_for_departament[3].text_for_player,
+                            departament_selection = 2,
+                            timer = {
+                                name = "Начальство",
+                                time = 300,
+                                active = true
+                            }
                         }
                     },
+
+                    functions = {
+                        time = function ()
+                            return os.date("%H:%M", os.time())
+                        end,
+
+                        departament_location = function ()
+                            return u8:decode(item_list_departament_location[int_item_departament_location[0] + 1])
+                        end
+                    }
                 }
 
-                for index, category in pairs(categories) do
-                    local message_departament = string.format("/d [%s] - [%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), categories[index]["text_departament"])
+                for index, category in pairs(categories.departament) do
+                    local message_departament = string.format("/d [%s] - [%s]: %s", u8:decode(item_list_departament_from[int_item_departament_from[0] + 1]), u8:decode(item_list_departament_to[int_item_departament_to[0] + 1]), category["text_departament"])
 
                     if AnimButton(u8(category.name), imgui.ImVec2(imgui.GetContentRegionAvail().x, 35)) then
-                        int_item_departament_to[0] = categories[index]["departament_selection"]
+                        int_item_departament_to[0] = category["departament_selection"]
 
                         imgui.OpenPopup(u8(category.name))
                     end
@@ -828,7 +861,7 @@ imgui.OnFrame(
 
                         imgui.PushItemWidth(475)
                         imgui.Text(u8("Нахождение:"))
-                        imgui.Combo("##selectFounding", int_item_founding, ImItemsFounding, #item_list_departament_from)
+                        imgui.Combo("##selectFounding", int_item_departament_location, ImItemsDepartamentLocation, #item_list_departament_location)
 
                         imgui.Text(u8("От:"))
                         imgui.Combo("##selectDepartamentFrom", int_item_departament_from, ImItemsDepartamentFrom, #item_list_departament_from)
@@ -839,15 +872,15 @@ imgui.OnFrame(
 
                         imgui.Separator()
 
-                        imgui.CenterText(u8(message_departament))
+                        imgui.CenterText(u8(message_departament):gsub("{departament_location}", u8(categories.functions.departament_location())))
 
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sampSendChat(message_departament)
-                            sampSendChat(category.text_for_player)
+                            sendMJHelperMessage(category["text_departament"]:gsub("{departament_location}", categories.functions.departament_location()))
+                            sendMJHelperMessage(category["text_for_player"]:gsub("{time}", categories.functions.time()))
 
-                            table.insert(timers, category.timer)
+                            table.insert(timers, category["timer"])
 
                             saveConfig()
 
@@ -863,6 +896,59 @@ imgui.OnFrame(
 
                         imgui.End()
                     end
+                end
+
+                imgui.Separator()
+
+                if AnimButton(u8("Редактирование"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 35)) then
+                    imgui.OpenPopup(u8("Редактирование"))
+                end
+
+                if imgui.BeginPopupModal(u8("Редактирование"), _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoScrollbar) then
+                    imgui.SetWindowSizeVec2(imgui.ImVec2(500, 220))
+
+                    for index, category in pairs(categories.departament) do
+                        if AnimButton(u8(category.name) .. "##" .. index, imgui.ImVec2(imgui.GetContentRegionAvail().x, 35)) then
+                            ffi.copy(config.ui.departament.text_departament, u8(category.text_departament))
+                            ffi.copy(config.ui.departament.text_for_player, u8(category.text_for_player))
+
+                            imgui.OpenPopup(u8(string.format("Редактирование [%s]", category.name)))
+                        end
+
+                        if imgui.BeginPopupModal(u8(string.format("Редактирование [%s]", category.name)), _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoScrollbar) then
+                            imgui.SetWindowSizeVec2(imgui.ImVec2(750, 210))
+
+                            imgui.PushItemWidth(imgui.GetContentRegionAvail().x)
+                            imgui.Text(u8("Сообщение в департамент:"))
+                            if imgui.InputText("##textDepartament", config.ui.departament.text_departament, 256) then
+                                text_for_departament[index].text_departament = u8:decode(ffi.string(config.ui.departament.text_departament))
+                                saveConfig()
+                            end
+
+                            imgui.Text(u8("Сообщение для игрока:"))
+                            if imgui.InputText("##textForPlayer", config.ui.departament.text_for_player, 256) then
+                                text_for_departament[index].text_for_player = u8:decode(ffi.string(config.ui.departament.text_for_player))
+                                saveConfig()
+                            end
+                            imgui.PopItemWidth()
+
+                            imgui.Separator()
+
+                            if AnimButton(u8("Закрыть"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
+                                imgui.CloseCurrentPopup()
+                            end
+
+                            imgui.End()
+                        end
+                    end
+
+                    imgui.Separator()
+
+                    if AnimButton(u8("Закрыть"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
+                        imgui.CloseCurrentPopup()
+                    end
+
+                    imgui.End()
                 end
             elseif activeTab[0] == 2 then
                 imgui.PushItemWidth(imgui.GetContentRegionAvail().x - 60)
@@ -1003,8 +1089,6 @@ imgui.OnFrame(
         imgui.PushFont(font)
         if imgui.Begin(u8("Умный розыск"), config.ui.window.wanted, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             imgui.CheckboxRedact()
-
-            imgui.Separator()
 
             if #wanteds ~= 0 then
                 local searchText = u8:decode(ffi.string(config.ui.search.description))
@@ -1800,10 +1884,14 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
 
     if offerActive then
         if dialogId == 25688 then
+            local index = 0
+
             for line in text:gsub("{......}", ""):gmatch("[^\n]+") do
                 local action, nickname = line:match("%[%d+%]%s+(.+)%.%s+(%w+_%w+)")
 
                 if action and nickname then
+                    index = index + 1
+
                     OfferMenu.show(
                         nickname,
                         action,
@@ -1847,6 +1935,8 @@ sampev.onSendDialogResponse = function(dialogId, button, listboxId, input)
 	if config.ui.bools.autoTake and dialogId == 88 and button == 1 then
 		sampSendChat("/take " .. take_id)
 	end
+
+    sendMJHelperMessage(listboxId)
 end
 
 sampev.onSendClientJoin = function () bodyCamActive = false end
@@ -1874,25 +1964,25 @@ end
 
 local hotkeys = function ()
     hotkey.RegisterHotKey("mainWindow", false, decodeJson(binds.mainWindow), function ()
-        if not sampIsCursorActive() then
+        if not sampIsCursorActive() or not sampIsDialogActive() then
             config.ui.window.main[0] = not config.ui.window.main[0]
         end
     end)
 
     hotkey.RegisterHotKey("siren", false, decodeJson(binds.siren), function ()
-        if not sampIsCursorActive() then
+        if not sampIsCursorActive() or not sampIsDialogActive() then
             sampProcessChatInput("/siren")
         end
     end)
 
     hotkey.RegisterHotKey("offerAccept", false, decodeJson(binds.offerAccept), function ()
-        if not sampIsCursorActive() then
+        if not sampIsCursorActive() or not sampIsDialogActive() then
             OfferMenu.triggerAccept()
         end
     end)
 
     hotkey.RegisterHotKey("offerDecline", false, decodeJson(binds.offerDecline), function ()
-        if not sampIsCursorActive() then
+        if not sampIsCursorActive() or not sampIsDialogActive() then
             OfferMenu.triggerDecline()
         end
     end)
