@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.0.1")
+script_version("5.0.0.2")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -635,17 +635,22 @@ local OfferMenu = (function()
         self.HideCursor = true
 
         if offer.show and os.clock() > offer.timer then
-            if offer.onTime then
-                offer.onTime()
-            end
-
+            if offer.onTime then offer.onTime() end
             offer.show = false
         end
 
         local targetAlpha = offer.show and 1.0 or 0.0
         offer.alpha = offer.alpha + (targetAlpha - offer.alpha) * math.min(imgui.GetIO().DeltaTime * 12.0, 1.0)
 
-        local width, height = 360.0, 110.0
+        imgui.PushFont(font)
+        local titleW = imgui.CalcTextSize(u8(offer.title)).x
+        local subW = imgui.CalcTextSize(u8(offer.subtitle)).x
+        local contentW = math.max(titleW, subW)
+
+        local width = math.max(360.0, 64.0 + contentW + 20.0)
+        local btnWidth = (width - 36.0) / 2
+        local height = 110.0
+
         local posX = (imgui.GetIO().DisplaySize.x - width) / 2
         local posY = imgui.GetIO().DisplaySize.y * 0.825 - 45.0 * offer.alpha
 
@@ -656,23 +661,13 @@ local OfferMenu = (function()
         imgui.PushStyleVarFloat(imgui.StyleVar.WindowRounding, 10.0)
         imgui.PushStyleColor(imgui.Col.WindowBg, imgui.ImVec4(0.06, 0.06, 0.06, 0.9))
 
-        imgui.PushFont(font)
         if imgui.Begin("##OfferMenuWindow", _, imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoSavedSettings) then
             local dl, p = imgui.GetWindowDrawList(), imgui.GetWindowPos()
 
             local pId = sampGetPlayerIdByNickname(offer.title)
             local getPlayerID = pId and tostring(pId)
             local iconSize = imgui.CalcTextSize(getPlayerID)
-            local progress = 0.0
-
-            if offer.show then
-                local totalTime = 10.0
-                local timeLeft = offer.timer - os.clock()
-
-                progress = timeLeft / totalTime
-            end
-
-            progress = math.max(0.0, math.min(1.0, progress))
+            local progress = offer.show and math.max(0.0, math.min(1.0, (offer.timer - os.clock()) / 10.0)) or 0.0
 
             dl:AddRectFilled(imgui.ImVec2(p.x + 12, p.y + 12), imgui.ImVec2(p.x + 52, p.y + 52), 0xFFFFFFFF, 8.0)
             dl:AddText(imgui.ImVec2(p.x + 32 - iconSize.x / 2, p.y + 32 - iconSize.y / 2), 0xFF000000, getPlayerID)
@@ -689,7 +684,7 @@ local OfferMenu = (function()
             imgui.TextColored(imgui.ImVec4(0.65, 0.65, 0.65, 1.0), u8(offer.subtitle))
 
             local drawButton = function (x, key, text)
-                local btnWidth, btnHeight = 162.0, 26.0
+                local btnHeight = 26.0
                 local keySize, textSize = imgui.CalcTextSize(key), imgui.CalcTextSize(text)
                 local keyBoxWidth = math.max(28.0, keySize.x + 16.0)
 
@@ -701,7 +696,7 @@ local OfferMenu = (function()
             end
 
             drawButton(p.x + 12, keyNames(offer.bindAccept), u8"Принять")
-            drawButton(p.x + 186, keyNames(offer.bindDecline), u8"Отказаться")
+            drawButton(p.x + 24 + btnWidth, keyNames(offer.bindDecline), u8"Отказаться")
 
             imgui.End()
         end
@@ -712,33 +707,23 @@ local OfferMenu = (function()
 
     return {
         show = function(title, subtitle, bindA, bindD, onA, onD, onT)
-            offer.title = title
-            offer.subtitle = subtitle
-            offer.bindAccept = bindA
-            offer.bindDecline = bindD
-            offer.onAccept = onA
-            offer.onDecline = onD
-            offer.onTime = onT
+            offer.title, offer.subtitle = title, subtitle
+            offer.bindAccept, offer.bindDecline = bindA, bindD
+            offer.onAccept, offer.onDecline, offer.onTime = onA, onD, onT
             offer.timer = os.clock() + 10
             offer.show = true
         end,
 
         triggerAccept = function()
             if offer.show and offer.alpha > 0.5 then
-                if offer.onAccept then
-                    offer.onAccept()
-                end
-
+                if offer.onAccept then offer.onAccept() end
                 offer.show = false
             end
         end,
 
         triggerDecline = function()
             if offer.show and offer.alpha > 0.5 then
-                if offer.onDecline then
-                    offer.onDecline()
-                end
-
+                if offer.onDecline then offer.onDecline() end
                 offer.show = false
             end
         end
