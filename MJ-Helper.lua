@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.0.3")
+script_version("5.0.0.4")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -1965,7 +1965,9 @@ local hotkeys = function ()
 
     hotkey.RegisterHotKey("siren", false, decodeJson(binds.siren), function ()
         if not sampIsCursorActive() and not sampIsDialogActive() then
-            sampProcessChatInput("/siren")
+            if isCharInAnyCar(PLAYER_PED) and getDriverOfCar(storeCarCharIsInNoSave(PLAYER_PED)) == PLAYER_PED then
+                sampProcessChatInput("/siren")
+            end
         end
     end)
 
@@ -2102,15 +2104,15 @@ function main()
             local car = storeCarCharIsInNoSave(PLAYER_PED)
 
             if getDriverOfCar(car) ~= PLAYER_PED then
-                showNotification("error", u8("Вы должны быть водителем этого автомобиля!"))
-                return sendMJHelperMessage("Вы должны быть водителем этого автомобиля!")
+                showNotification("error", u8("Вы должны быть водителем этого транспорта!"))
+                return sendMJHelperMessage("Вы должны быть водителем этого транспорта!")
             end
 
             switchCarSiren(car, not isCarSirenOn(car))
             sendMJHelperMessage(string.format("Мигалки %s!", isCarSirenOn(car) and "включены" or "выключены"))
         else
-            showNotification("error", u8("Вы должны находиться в автомобиле!"))
-            sendMJHelperMessage("Вы должны находиться в автомобиле!")
+            showNotification("error", u8("Вы должны находиться в транспорте!"))
+            sendMJHelperMessage("Вы должны находиться в транспорте!")
         end
     end)
 
