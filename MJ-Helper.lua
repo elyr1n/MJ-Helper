@@ -111,7 +111,7 @@ local searched = {}
 local timers = {}
 local binds = {
     mainWindow = "[113]",
-    siren = "[48]",
+    siren = "[51]",
     offerAccept = "[49]",
     offerDecline = "[48]"
 }
