@@ -1884,12 +1884,12 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
         return false
     end
 
-    if dialogId == 25688 then
-        sampSendDialogResponse(dialogId, 1, 0, "")
-        return false
-    end
-
     if offerActive then
+        if dialogId == 25688 then
+            sampSendDialogResponse(dialogId, 1, 0, "")
+            return false
+        end
+
         if dialogId == 25689 then
             for line in text_without_hex:gmatch("[^\n]+") do
                 if line:match("%[1%] Отправил предложение%: (.+)") then nickname = line:match("%[1%] Отправил предложение%: (.+)") end
