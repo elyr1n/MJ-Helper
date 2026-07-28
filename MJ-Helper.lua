@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.0.4")
+script_version("5.0.1")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -877,7 +877,7 @@ imgui.OnFrame(
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sampSendChat(category["text_departament"]:gsub("{departament_location}", categories.functions.departament_location()))
+                            sampSendChat(message_departament:gsub("{departament_location}", categories.functions.departament_location()))
                             sampSendChat(category["text_for_player"]:gsub("{time}", categories.functions.time()))
 
                             table.insert(timers, category["timer"])
@@ -1861,8 +1861,10 @@ sampev.onServerMessage = function(color, text)
 end
 
 sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
+    local text_without_hex = text:gsub("{......}", "")
+
     if dialogId == 1780 and searchWanted then
-        for line in text:gsub("{......}", ""):gmatch("[^\n]+") do
+        for line in text_without_hex:gmatch("[^\n]+") do
             local nickname, id, level, distance = line:match("(%w+_%w+)%((%d+)%)%s+(%d) уровень%s+%[(.+)%]")
 
             if nickname and id and level and distance then
@@ -1882,39 +1884,35 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
         return false
     end
 
-    if offerActive then
-        if dialogId == 25688 then
-            for line in text:gsub("{......}", ""):gmatch("[^\n]+") do
-                local action, nickname = line:match("%[%d+%]%s+(.+)%.%s+(%w+_%w+)")
+    if dialogId == 25688 then
+        sampSendDialogResponse(dialogId, 1, 0, "")
+        return false
+    end
 
-                if action and nickname then
-                    OfferMenu.show(
-                        nickname,
-                        action,
-                        decodeJson(binds.offerAccept),
-                        decodeJson(binds.offerDecline),
-                        function()
-                            sampSendDialogResponse(25688, 1, 0, "")
-                        end,
-                        function()
-                            offerActive = false
-                            sampSendDialogResponse(25688, 1, 1, "")
-                        end,
-                        function()
-                            offerActive = false
-                            sampSendDialogResponse(25688, 1, 1, "")
-                        end
-                    )
-                end
+    if offerActive then
+        if dialogId == 25689 then
+            for line in text_without_hex:gmatch("[^\n]+") do
+                if line:match("%[1%] Отправил предложение%: (.+)") then nickname = line:match("%[1%] Отправил предложение%: (.+)") end
+                if line:match("%[2%] Суть предложения%: (.+)") then action = line:match("%[2%] Суть предложения%: (.+)") end
             end
 
-            return false
-        end
-
-        if dialogId == 25689 then
-            sampSendDialogResponse(25689, 1, 2, "")
-
-            offerActive = false
+            OfferMenu.show(
+                nickname,
+                action,
+                decodeJson(binds.offerAccept),
+                decodeJson(binds.offerDecline),
+                function ()
+                    sampSendDialogResponse(dialogId, 1, 2, "")
+                end,
+                function ()
+                    offerActive = false
+                    sampSendDialogResponse(dialogId, 1, 3, "")
+                end,
+                function ()
+                    offerActive = false
+                    sampSendDialogResponse(dialogId, 1, 3, "")
+                end
+            )
 
             return false
         end
