@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.1")
+script_version("5.0.2")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -658,6 +658,7 @@ local OfferMenu = (function()
 
         if offer.show and os.clock() > offer.timer then
             if offer.onTime then offer.onTime() end
+            offerActive = false
             offer.show = false
         end
 
@@ -739,6 +740,7 @@ local OfferMenu = (function()
         triggerAccept = function()
             if offer.show and offer.alpha > 0.5 then
                 if offer.onAccept then offer.onAccept() end
+                offerActive = false
                 offer.show = false
             end
         end,
@@ -746,6 +748,7 @@ local OfferMenu = (function()
         triggerDecline = function()
             if offer.show and offer.alpha > 0.5 then
                 if offer.onDecline then offer.onDecline() end
+                offerActive = false
                 offer.show = false
             end
         end
@@ -1905,11 +1908,9 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
                     sampSendDialogResponse(dialogId, 1, 2, "")
                 end,
                 function ()
-                    offerActive = false
                     sampSendDialogResponse(dialogId, 1, 3, "")
                 end,
                 function ()
-                    offerActive = false
                     sampSendDialogResponse(dialogId, 1, 3, "")
                 end
             )
