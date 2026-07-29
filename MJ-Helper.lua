@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.2")
+script_version("5.0.2.1")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -305,7 +305,7 @@ local hexToInt = function(hex)
 end
 
 local sampGetPlayerIdByNickname = function (nick)
-    local _, myid = sampGetPlayerIdByCharHandle(PLAYER_PED)
+    local myid = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
 
     if tostring(nick) == sampGetPlayerNickname(myid) then
         return myid
@@ -1112,14 +1112,10 @@ imgui.OnFrame(
 
                         RenderAnimated("wanted_child_" .. indexWanted, is_open, alpha, function()
                             for indexChildren, children in pairs(wanted.children) do
-                                local descriptionMenu, descriptionPopup = children.description, children.description
+                                local descriptionMenu = children.description
 
-                                if #descriptionMenu > 85 then
-                                    descriptionMenu = descriptionMenu:sub(1, 85) .. "..."
-                                end
-
-                                if #descriptionPopup > 75 then
-                                    descriptionPopup = descriptionPopup:sub(1, 75) .. "..."
+                                if #descriptionMenu > 80 then
+                                    descriptionMenu = descriptionMenu:sub(1, 80) .. "..."
                                 end
 
                                 local width = imgui.GetContentRegionAvail().x
@@ -1280,7 +1276,7 @@ imgui.OnFrame(
 
                 imgui.EndChild()
             else
-                imgui.Text(u8("Розыск не настроен!"))
+                imgui.Text(u8("УК не настроено!"))
 
                 if config.ui.bools.redactMode[0] then
                     if AnimButton(u8("Добавить статью"), imgui.ImVec2(imgui.GetWindowSize().x - 25, 35)) then
@@ -1323,8 +1319,6 @@ imgui.OnFrame(
         if imgui.Begin(u8("Умное ФП"), config.ui.window.federal, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             imgui.CheckboxRedact()
 
-            imgui.Separator()
-
             if #federals ~= 0 then
                 local searchText = u8:decode(ffi.string(config.ui.search.description))
 
@@ -1340,10 +1334,10 @@ imgui.OnFrame(
                     local is_match = #searchText == 0 or string.find(lower(federal.description), lower(searchText))
 
                     RenderAnimated("fed_item_" .. indexFederal, is_match, alpha, function()
-                        local descriptionMenu= federal.description
+                        local descriptionMenu = federal.description
 
-                        if #descriptionMenu > 90 then
-                            descriptionMenu = descriptionMenu:sub(1, 90) .. "..."
+                        if #descriptionMenu > 85 then
+                            descriptionMenu = descriptionMenu:sub(1, 85) .. "..."
                         end
 
                         local width = imgui.GetContentRegionAvail().x
@@ -1455,8 +1449,6 @@ imgui.OnFrame(
         imgui.PushFont(font)
         if imgui.Begin(u8("Умная выдача штрафов"), config.ui.window.administrative, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
             imgui.CheckboxRedact()
-
-            imgui.Separator()
 
             if #administratives ~= 0 then
                 local searchText = u8:decode(ffi.string(config.ui.search.description))
