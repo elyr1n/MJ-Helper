@@ -881,8 +881,8 @@ imgui.OnFrame(
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sendMJHelperMessage(message_departament:gsub("{departament_location}", categories.functions.departament_location()))
-                            sendMJHelperMessage(category["text_for_player"]:gsub("{time}", categories.functions.time()))
+                            sampSendChat(message_departament:gsub("{departament_location}", categories.functions.departament_location()))
+                            sampSendChat(category["text_for_player"]:gsub("{time}", categories.functions.time()))
 
                             table.insert(timers, category["timer"])
 
