@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.2.1")
+script_version("5.0.2.2")
 
 local fa = require("fAwesome6_solid")
 local effil = require("effil")
@@ -113,7 +113,8 @@ local binds = {
     mainWindow = "[113]",
     siren = "[51]",
     offerAccept = "[49]",
-    offerDecline = "[48]"
+    offerDecline = "[48]",
+    searchedWindow = "[46]"
 }
 local text_for_departament = {
     {
@@ -258,22 +259,22 @@ local loadConfig = function()
         local ok, parsed = pcall(json.decode, content)
 
         if ok and parsed then
-            wanteds = parsed.wanteds or {}
-            federals = parsed.federals or {}
-            administratives = parsed.administratives or {}
-            notepad = parsed.notepad or {}
-            logMessage = parsed.logMessage or false
-            settingsSearchedWindow = parsed.settingsSearchedWindow or {}
-            timers = parsed.timers or {}
+            wanteds = parsed.wanteds
+            federals = parsed.federals
+            administratives = parsed.administratives
+            notepad = parsed.notepad
+            logMessage = parsed.logMessage
+            settingsSearchedWindow = parsed.settingsSearchedWindow
+            timers = parsed.timers
             binds = parsed.binds
             text_for_departament = parsed.text_for_departament
 
-            config.ui.palitre.megafon[0] = parsed.megafon[1] or 1
-            config.ui.palitre.megafon[1] = parsed.megafon[2] or 1
-            config.ui.palitre.megafon[2] = parsed.megafon[3] or 0
+            config.ui.palitre.megafon[0] = parsed.megafon[1]
+            config.ui.palitre.megafon[1] = parsed.megafon[2]
+            config.ui.palitre.megafon[2] = parsed.megafon[3]
 
-            config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam or false
-            config.ui.bools.autoTake[0] = parsed.autoTake or false
+            config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam
+            config.ui.bools.autoTake[0] = parsed.autoTake
         end
     end
 end
@@ -880,8 +881,8 @@ imgui.OnFrame(
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sampSendChat(message_departament:gsub("{departament_location}", categories.functions.departament_location()))
-                            sampSendChat(category["text_for_player"]:gsub("{time}", categories.functions.time()))
+                            sendMJHelperMessage(message_departament:gsub("{departament_location}", categories.functions.departament_location()))
+                            sendMJHelperMessage(category["text_for_player"]:gsub("{time}", categories.functions.time()))
 
                             table.insert(timers, category["timer"])
 
@@ -1061,6 +1062,7 @@ imgui.OnFrame(
                         showHotkey("siren", "Сирена")
                         showHotkey("offerAccept", "Принять /offer")
                         showHotkey("offerDecline", "Отказаться от /offer")
+                        showHotkey("searchedWindow", "Перемещение окна /awanted")
 
                         imgui.EndTabItem()
                     end
@@ -1688,10 +1690,6 @@ imgui.OnFrame(
                 player.HideCursor = not player.HideCursor
             end
 
-            if isKeyJustPressed(vkeys.VK_DELETE) then
-                moveSearchedWindow = not moveSearchedWindow
-            end
-
             if moveSearchedWindow then
                 player.HideCursor = false
 
@@ -1973,6 +1971,12 @@ local hotkeys = function ()
             OfferMenu.triggerDecline()
         end
     end)
+
+    hotkey.RegisterHotKey("searchedWindow", false, decodeJson(binds.searchedWindow), function ()
+        if config.ui.window.searched[0] then
+            moveSearchedWindow = not moveSearchedWindow
+        end
+    end)
 end
 
 function main()
@@ -2062,6 +2066,7 @@ function main()
 
         saveConfig()
 
+        showNotification("info", u8(string.format("Теперь сообщения от хелпера выводятся в %s!", logMessage and "лог SampFuncs" or "чат")))
         sendMJHelperMessage(string.format("Теперь сообщения от хелпера выводятся в %s!", logMessage and "лог SampFuncs" or "чат"))
     end)
 
