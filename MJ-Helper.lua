@@ -3,9 +3,9 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.2.2")
+script_version("5.0.3")
 
-local fa = require("fAwesome6_solid")
+local fa = require("fAwesome6")
 local effil = require("effil")
 local vkeys = require("vkeys")
 local sampev = require("samp.events")
@@ -63,7 +63,7 @@ local config = {
         },
 
         palitre = {
-            megafon = imgui.new.float[3]()
+            megafon = imgui.new.float[3](1, 1, 0)
         }
     },
 }
@@ -118,15 +118,15 @@ local binds = {
 }
 local text_for_departament = {
     {
-        text_departament = "Адвоката в допросную {departament_location}.",
+        text_departament = "Адвоката в допросную {location}.",
         text_for_player = "Адвокат вызван. Время вызова: {time}. Время на приезд, после принятия вызова: 5 минут.",
     },
     {
-        text_departament = "Прокурора в допросную {departament_location}.",
+        text_departament = "Прокурора в допросную {location}.",
         text_for_player = "Прокурор вызван. Время вызова: {time}. Время на приезд, после принятия вызова: 10 минут.",
     },
     {
-        text_departament = "Начальство в допросную {departament_location}.",
+        text_departament = "Начальство в допросную {location}.",
         text_for_player = "Начальство вызвано. Время вызова: {time}. Время на приезд, после принятия вызова: 10 минут.",
     }
 }
@@ -152,9 +152,9 @@ local update = {
 local renderFont = renderCreateFont("Verdana", 10, 1 + 8)
 local config_path = getWorkingDirectory() .. "\\config\\MJ-Helper.json"
 
-local sendMJHelperMessage = function(text)
+local sendMJHelperMessage = function (text)
     if logMessage then
-        return print(string.format("[MJ-Helper]: %s", text))
+        return print(text)
     end
 
     sampAddChatMessage(string.format("[MJ-Helper]: {FFFFFF}%s", text), 0xff4f00)
@@ -198,13 +198,13 @@ local asyncHttpRequest = function (method, url, args, resolve, reject)
     end)
 end
 
-local check_update = function()
+local check_update = function ()
     asyncHttpRequest(
         "GET",
         updateUrls[1],
         {},
 
-        function(response)
+        function (response)
             local status, data = pcall(json.decode, response.text)
 
             if status and type(data) == "table" and data.version and data.text then
@@ -225,7 +225,7 @@ local check_update = function()
     )
 end
 
-local saveConfig = function()
+local saveConfig = function ()
     local data = {
         wanteds = wanteds,
         federals = federals,
@@ -249,7 +249,7 @@ local saveConfig = function()
     end
 end
 
-local loadConfig = function()
+local loadConfig = function ()
     local file = io.open(config_path, "r")
 
     if file then
@@ -279,19 +279,19 @@ local loadConfig = function()
     end
 end
 
-local lower = function(str)
+local lower = function (str)
     return str:gsub("А", "а"):gsub("Б", "б"):gsub("В", "в"):gsub("Г", "г"):gsub("Д", "д"):gsub("Е", "е"):gsub("Ё", "ё"):gsub("Ж", "ж"):gsub("З", "з"):gsub("И", "и"):gsub("Й", "й"):gsub("К", "к"):gsub("Л", "л"):gsub("М", "м"):gsub("Н", "н"):gsub("О", "о"):gsub("П", "п"):gsub("Р", "р"):gsub("С", "с"):gsub("Т", "т"):gsub("У", "у"):gsub("Ф", "ф"):gsub("Х", "х"):gsub("Ц", "ц"):gsub("Ч", "ч"):gsub("Ш", "ш"):gsub("Щ", "щ"):gsub("Ъ", "ъ"):gsub("Ы", "ы"):gsub("Ь", "ь"):gsub("Э", "э"):gsub("Ю", "ю"):gsub("Я", "я")
 end
 
-local toHEX = function(r, g, b)
-    local clamp = function(v)
+local toHEX = function (r, g, b)
+    local clamp = function (v)
         return math.max(0, math.min(255, math.floor(v + 0.5)))
     end
 
     return string.format("%02X%02X%02X", clamp(r), clamp(g), clamp(b))
 end
 
-local hexToInt = function(hex)
+local hexToInt = function (hex)
     local r = tonumber(hex:sub(1, 2), 16)
     local g = tonumber(hex:sub(3, 4), 16)
     local b = tonumber(hex:sub(5, 6), 16)
@@ -303,20 +303,6 @@ local hexToInt = function(hex)
     end
 
     return color
-end
-
-local sampGetPlayerIdByNickname = function (nick)
-    local myid = select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))
-
-    if tostring(nick) == sampGetPlayerNickname(myid) then
-        return myid
-    end
-
-    for i = 0, 999 do
-        if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == tostring(nick) then
-            return i
-        end
-    end
 end
 
 local keyNames = function (keys)
@@ -335,7 +321,7 @@ local keyNames = function (keys)
     end
 end
 
-local DarkTheme = function()
+local DarkTheme = function ()
     imgui.SwitchContext()
     local style = imgui.GetStyle()
     local colors = style.Colors
@@ -398,21 +384,30 @@ local DarkTheme = function()
     colors[imgui.Col.ModalWindowDimBg]       = imgui.ImVec4(0.00, 0.00, 0.00, 0.70)
 end
 
-imgui.OnInitialize(function()
+imgui.OnInitialize(function ()
     DarkTheme()
 
+    local config = imgui.ImFontConfig()
     local atlas = imgui.GetIO().Fonts
     local font_path = getWorkingDirectory() .. "\\resource\\fonts\\Eagle-Sans-Bold.ttf"
     local cyr_ranges = atlas:GetGlyphRangesCyrillic()
 
     font = atlas:AddFontFromFileTTF(font_path, 16.0, nil, cyr_ranges)
+    bigFont = atlas:AddFontFromFileTTF(font_path, 20.0, nil, cyr_ranges)
 
-    fa.Init(12)
+    config.MergeMode = true
+    config.PixelSnapH = true
+    iconRanges = imgui.new.ImWchar[3](fa.min_range, fa.max_range, 0)
+    imgui.GetIO().Fonts:AddFontFromMemoryCompressedBase85TTF(fa.get_font_data_base85("solid"), 12, config, iconRanges)
+
+    local iconConfig = imgui.ImFontConfig()
+    iconConfig.PixelSnapH = true
+    bigIcon = atlas:AddFontFromMemoryCompressedBase85TTF(fa.get_font_data_base85("solid"), 20, iconConfig, iconRanges)
 
     imgui.GetIO().IniFilename = nil
 end)
 
-imgui.CenterText = function(text)
+imgui.CenterText = function (text)
     local width = imgui.GetWindowWidth()
     local calc = imgui.CalcTextSize(text)
 
@@ -420,7 +415,7 @@ imgui.CenterText = function(text)
     imgui.Text(text)
 end
 
-imgui.CenterColumnText = function(text)
+imgui.CenterColumnText = function (text)
     imgui.SetCursorPosX((imgui.GetColumnOffset() + (imgui.GetColumnWidth() / 2)) - imgui.CalcTextSize(text).x / 2)
     imgui.SetCursorPosY(imgui.GetCursorPosY() + 10)
 
@@ -557,7 +552,7 @@ imgui.CheckboxRedact = function ()
     end)
 end
 
-local showNotification = (function()
+local showNotification = (function ()
     local notif = {
         show = false, text = "", timer = 0, duration = 3.0, alpha = 0.0, type = "success",
         types = {
@@ -579,17 +574,15 @@ local showNotification = (function()
             notif.alpha = 0.0
         end
 
-        imgui.PushFont(font)
+        imgui.PushFont(bigFont)
+        local minW, fixedH = 320.0, 55.0
 
-        local minW, minH = 440.0, 55.0
-        local fontScale = 1.25
-        local maxTextW = (minW - 68.0) / fontScale
+        local singleLineSize = imgui.CalcTextSize(notif.text, nil, false, 0.0)
+        local realTextW = singleLineSize.x
+        local realTextH = singleLineSize.y
 
-        local textSize = imgui.CalcTextSize(notif.text, nil, false, maxTextW)
-        local realTextH = textSize.y * fontScale
-
-        local w = minW
-        local h = math.max(minH, realTextH + 24.0)
+        local w = math.max(minW, realTextW + 75.0)
+        local h = fixedH
 
         local ds = imgui.GetIO().DisplaySize
         local posX = (ds.x - w) / 2
@@ -616,12 +609,10 @@ local showNotification = (function()
             dl:AddRectFilled(p, imgui.ImVec2(p.x + s.x, p.y + s.y), cur.color, 8.0)
             dl:PopClipRect()
 
-            imgui.SetWindowFontScale(fontScale)
-            imgui.SetCursorPos(imgui.ImVec2(48, (s.y - realTextH) / 2))
-            imgui.PushTextWrapPos(s.x - 20)
+            local textY = ((s.y - realTextH) / 2)
+
+            imgui.SetCursorPos(imgui.ImVec2(50, textY))
             imgui.TextUnformatted(notif.text)
-            imgui.PopTextWrapPos()
-            imgui.SetWindowFontScale(1.0)
 
             imgui.End()
         end
@@ -631,8 +622,8 @@ local showNotification = (function()
         imgui.PopStyleVar(3)
     end)
 
-    return function(nType, text)
-        notif.text = text
+    return function (nType, text)
+        notif.text = u8(text)
         notif.type = nType
         notif.duration = 3.0
         notif.timer = os.clock() + notif.duration
@@ -640,7 +631,7 @@ local showNotification = (function()
     end
 end)()
 
-local OfferMenu = (function()
+local OfferMenu = (function ()
     local offer = {
         show = false,
         alpha = 0,
@@ -667,6 +658,7 @@ local OfferMenu = (function()
         offer.alpha = offer.alpha + (targetAlpha - offer.alpha) * math.min(imgui.GetIO().DeltaTime * 12.0, 1.0)
 
         imgui.PushFont(font)
+        
         local titleW = imgui.CalcTextSize(u8(offer.title)).x
         local subW = imgui.CalcTextSize(u8(offer.subtitle)).x
         local contentW = math.max(titleW, subW)
@@ -688,13 +680,15 @@ local OfferMenu = (function()
         if imgui.Begin(u8("Предложение"), _, imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoSavedSettings) then
             local dl, p = imgui.GetWindowDrawList(), imgui.GetWindowPos()
 
-            local pId = sampGetPlayerIdByNickname(offer.title)
-            local getPlayerID = pId and tostring(pId)
-            local iconSize = imgui.CalcTextSize(getPlayerID)
-            local progress = offer.show and math.max(0.0, math.min(1.0, (offer.timer - os.clock()) / 10.0)) or 0.0
+            imgui.PushFont(bigIcon)
+            local iconUser = fa.USER
+            local iconSize = imgui.CalcTextSize(iconUser)
 
             dl:AddRectFilled(imgui.ImVec2(p.x + 12, p.y + 12), imgui.ImVec2(p.x + 52, p.y + 52), 0xFFFFFFFF, 8.0)
-            dl:AddText(imgui.ImVec2(p.x + 32 - iconSize.x / 2, p.y + 32 - iconSize.y / 2), 0xFF000000, getPlayerID)
+            dl:AddText(imgui.ImVec2(p.x + 32 - iconSize.x / 2, p.y + 32 - iconSize.y / 2), 0xFF000000, iconUser)
+            imgui.PopFont()
+
+            local progress = offer.show and math.max(0.0, math.min(1.0, (offer.timer - os.clock()) / 10.0)) or 0.0
 
             dl:AddRectFilled(
                 imgui.ImVec2(p.x + 12, p.y + 62),
@@ -724,13 +718,14 @@ local OfferMenu = (function()
 
             imgui.End()
         end
-        imgui.PopFont()
+
         imgui.PopStyleColor(1)
         imgui.PopStyleVar(2)
+        imgui.PopFont()
     end)
 
     return {
-        show = function(title, subtitle, bindA, bindD, onA, onD, onT)
+        show = function (title, subtitle, bindA, bindD, onA, onD, onT)
             offer.title, offer.subtitle = title, subtitle
             offer.bindAccept, offer.bindDecline = bindA, bindD
             offer.onAccept, offer.onDecline, offer.onTime = onA, onD, onT
@@ -738,7 +733,7 @@ local OfferMenu = (function()
             offer.show = true
         end,
 
-        triggerAccept = function()
+        triggerAccept = function ()
             if offer.show and offer.alpha > 0.5 then
                 if offer.onAccept then offer.onAccept() end
                 offerActive = false
@@ -746,7 +741,7 @@ local OfferMenu = (function()
             end
         end,
 
-        triggerDecline = function()
+        triggerDecline = function ()
             if offer.show and offer.alpha > 0.5 then
                 if offer.onDecline then offer.onDecline() end
                 offerActive = false
@@ -845,7 +840,7 @@ imgui.OnFrame(
                             return os.date("%H:%M", os.time())
                         end,
 
-                        departament_location = function ()
+                        location = function ()
                             return u8:decode(item_list_departament_location[int_item_departament_location[0] + 1])
                         end
                     }
@@ -876,19 +871,19 @@ imgui.OnFrame(
 
                         imgui.Separator()
 
-                        imgui.CenterText(u8(message_departament):gsub("{departament_location}", u8(categories.functions.departament_location())))
+                        imgui.CenterText(u8(message_departament):gsub("{location}", u8(categories.functions.location())))
 
                         imgui.Separator()
 
                         if AnimButton(u8("Отправить"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 30)) then
-                            sampSendChat(message_departament:gsub("{departament_location}", categories.functions.departament_location()))
+                            sampSendChat(message_departament:gsub("{location}", categories.functions.location()))
                             sampSendChat(category["text_for_player"]:gsub("{time}", categories.functions.time()))
 
                             table.insert(timers, category["timer"])
 
                             saveConfig()
 
-                            showNotification("success", u8("Сообщение в департамент отправлено!"))
+                            showNotification("success", "Сообщение в департамент отправлено!")
                             sendMJHelperMessage("Сообщение в департамент отправлено!")
 
                             imgui.CloseCurrentPopup()
@@ -972,7 +967,7 @@ imgui.OnFrame(
 
                             saveConfig()
 
-                            showNotification("info", u8(string.format("Таймер \"%s\" %s!", timer.name, timer.active and "включен" or "отключён")))
+                            showNotification("info", string.format("Таймер \"%s\" %s!", timer.name, timer.active and "включен" or "отключён"))
                             sendMJHelperMessage(string.format("Таймер \"%s\" %s!", timer.name, timer.active and "включен" or "отключён"))
                         end
 
@@ -1109,10 +1104,10 @@ imgui.OnFrame(
                 for indexWanted, wanted in pairs(wanteds) do
                     local is_match = #searchText == 0 or string.find(lower(wanted.description), lower(searchText))
 
-                    RenderAnimated("wanted_group_" .. indexWanted, is_match, alpha, function()
+                    RenderAnimated("wanted_group_" .. indexWanted, is_match, alpha, function ()
                         local is_open = imgui.CollapsingHeader(u8(string.format("Статья %s. %s ##" .. indexWanted, wanted.section, wanted.description)))
 
-                        RenderAnimated("wanted_child_" .. indexWanted, is_open, alpha, function()
+                        RenderAnimated("wanted_child_" .. indexWanted, is_open, alpha, function ()
                             for indexChildren, children in pairs(wanted.children) do
                                 local descriptionMenu = children.description
 
@@ -1335,7 +1330,7 @@ imgui.OnFrame(
                 for indexFederal, federal in pairs(federals) do
                     local is_match = #searchText == 0 or string.find(lower(federal.description), lower(searchText))
 
-                    RenderAnimated("fed_item_" .. indexFederal, is_match, alpha, function()
+                    RenderAnimated("fed_item_" .. indexFederal, is_match, alpha, function ()
                         local descriptionMenu = federal.description
 
                         if #descriptionMenu > 85 then
@@ -1466,7 +1461,7 @@ imgui.OnFrame(
                 for indexAdministrative, administrative in pairs(administratives) do
                     local is_match = #searchText == 0 or string.find(lower(administrative.description), lower(searchText))
 
-                    RenderAnimated("admin_item_" .. indexAdministrative, is_match, alpha, function()
+                    RenderAnimated("admin_item_" .. indexAdministrative, is_match, alpha, function ()
                         local descriptionMenu = administrative.description
 
                         if #descriptionMenu > 75 then
@@ -1776,7 +1771,7 @@ imgui.OnFrame(
             if AnimButton(u8("Обновить"), imgui.ImVec2(imgui.GetContentRegionAvail().x / 2 - 5, 35)) then
                 sendMJHelperMessage("Скачиваю обновление...")
 
-                downloadUrlToFile(updateUrls[2], thisScript().path, function(id, status)
+                downloadUrlToFile(updateUrls[2], thisScript().path, function (id, status)
                     if status == 6 then
                         sendMJHelperMessage("Обновление успешно завершено!")
                         sendMJHelperMessage("Скрипт перезагрузится для применения изменений!")
@@ -1799,10 +1794,10 @@ imgui.OnFrame(
     end
 )
 
-local registerCommandWithArgument = function(command, window)
-    sampRegisterChatCommand(command, function(id)
+local registerCommandWithArgument = function (command, window)
+    sampRegisterChatCommand(command, function (id)
         if #id == 0 then
-            showNotification("error", u8("ID не указан!"))
+            showNotification("error", "ID не указан!")
             return sendMJHelperMessage("ID не указан!")
         end
 
@@ -1811,13 +1806,13 @@ local registerCommandWithArgument = function(command, window)
     end)
 end
 
-local switchingWindow = function(command, window)
-    sampRegisterChatCommand(command, function()
+local switchingWindow = function (command, window)
+    sampRegisterChatCommand(command, function ()
         window[0] = not window[0]
     end)
 end
 
-sampev.onServerMessage = function(color, text)
+sampev.onServerMessage = function (color, text)
     local textWithoutHex = text:gsub("{......}", "")
 
     if afind then
@@ -1825,7 +1820,7 @@ sampev.onServerMessage = function(color, text)
             if textWithoutHex:find(error) then
                 afind = false
 
-                showNotification("error", u8("/afind прекратил свою работу из-за ошибки!"))
+                showNotification("error", "/afind прекратил свою работу из-за ошибки!")
                 sendMJHelperMessage("/afind прекратил свою работу из-за ошибки!")
             end
         end
@@ -1853,11 +1848,11 @@ sampev.onServerMessage = function(color, text)
     end
 end
 
-sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
-    local text_without_hex = text:gsub("{......}", "")
+sampev.onShowDialog = function (dialogId, style, title, button1, button2, text)
+    local textWithoutHex = text:gsub("{......}", "")
 
     if dialogId == 1780 and searchWanted then
-        for line in text_without_hex:gmatch("[^\n]+") do
+        for line in textWithoutHex:gmatch("[^\n]+") do
             local nickname, id, level, distance = line:match("(%w+_%w+)%((%d+)%)%s+(%d) уровень%s+%[(.+)%]")
 
             if nickname and id and level and distance then
@@ -1884,7 +1879,7 @@ sampev.onShowDialog = function(dialogId, style, title, button1, button2, text)
         end
 
         if dialogId == 25689 then
-            for line in text_without_hex:gmatch("[^\n]+") do
+            for line in textWithoutHex:gmatch("[^\n]+") do
                 if line:match("%[1%] Отправил предложение%: (.+)") then nickname = line:match("%[1%] Отправил предложение%: (.+)") end
                 if line:match("%[2%] Суть предложения%: (.+)") then action = line:match("%[2%] Суть предложения%: (.+)") end
             end
@@ -1912,13 +1907,13 @@ end
 
 function sampev.onSendCommand(command)
     if command:match("^/take (.+)") then
-        take_id = command:match("^/take (.+)")
+        takeID = command:match("^/take (.+)")
     end
 end
 
-sampev.onSendDialogResponse = function(dialogId, button, listboxId, input)
+sampev.onSendDialogResponse = function (dialogId, button, listboxId, input)
 	if config.ui.bools.autoTake and dialogId == 88 and button == 1 then
-		sampSendChat("/take " .. take_id)
+		sampSendChat("/take " .. takeID)
 	end
 end
 
@@ -1928,8 +1923,8 @@ sampev.onConnectionRejected = function () bodyCamActive = false end
 sampev.onSendSpawn = function () bodyCamActive = false end
 sampev.onSendDeathNotification = function (reason, killerId) bodyCamActive = false end
 
-local hi = function()
-    showNotification("success", u8("Хелпер для МЮ инициализирован!"))
+local hi = function ()
+    showNotification("success", "Хелпер для МЮ инициализирован!")
 
     sendMJHelperMessage("Хелпер для МЮ инициализирован!")
     sendMJHelperMessage("В консоль SampFuncs написаны все команды для хелпера и их описание!")
@@ -1999,7 +1994,7 @@ function main()
     switchingWindow("bl", config.ui.window.notepad)
     switchingWindow("mj", config.ui.window.main)
 
-    lua_thread.create(function()
+    lua_thread.create(function ()
         while true do
             if afind then
                 sampSendChat("/find " .. targetID)
@@ -2010,7 +2005,7 @@ function main()
         end
     end)
 
-    lua_thread.create(function()
+    lua_thread.create(function ()
         while true do
             if #timers ~= 0 then
                 for index, timer in pairs(timers) do
@@ -2024,7 +2019,7 @@ function main()
 
                             saveConfig()
 
-                            showNotification("info", u8(string.format("Таймер \"%s\" закончился!", timer.name)))
+                            showNotification("info", string.format("Таймер \"%s\" закончился!", timer.name))
                             sendMJHelperMessage(string.format("Таймер \"%s\" закончился!", timer.name))
                         end
                     end
@@ -2035,46 +2030,46 @@ function main()
         end
     end)
 
-    sampRegisterChatCommand("afind", function(id)
+    sampRegisterChatCommand("afind", function (id)
         if #id == 0 then
             if afind then
                 afind = false
 
-                showNotification("error", u8("/afind отключён!"))
+                showNotification("error", "/afind отключён!")
                 return sendMJHelperMessage("/afind отключён!")
             end
 
-            showNotification("error", u8("ID не указан!"))
+            showNotification("error", "ID не указан!")
             return sendMJHelperMessage("ID не указан!")
         end
 
         targetID = tonumber(id)
 
         if targetID < 0 or targetID > 999 then
-            showNotification("error", u8("ID должен быть от 0 до 999!"))
+            showNotification("error", "ID должен быть от 0 до 999!")
             return sendMJHelperMessage("ID должен быть от 0 до 999!")
         end
 
         afind = true
 
-        showNotification("success", u8(string.format("Ищу по /find игрока с ID %d!", targetID)))
+        showNotification("success", string.format("Ищу по /find игрока с ID %d!", targetID))
         sendMJHelperMessage(string.format("Ищу по /find игрока с ID %d!", targetID))
     end)
 
-    sampRegisterChatCommand("log", function()
+    sampRegisterChatCommand("log", function ()
         logMessage = not logMessage
 
         saveConfig()
 
-        showNotification("info", u8(string.format("Теперь сообщения от хелпера выводятся в %s!", logMessage and "лог SampFuncs" or "чат")))
+        showNotification("info", string.format("Теперь сообщения от хелпера выводятся в %s!", logMessage and "лог SampFuncs" or "чат"))
         sendMJHelperMessage(string.format("Теперь сообщения от хелпера выводятся в %s!", logMessage and "лог SampFuncs" or "чат"))
     end)
 
-    sampRegisterChatCommand("awanted", function()
-        lua_thread.create(function()
+    sampRegisterChatCommand("awanted", function ()
+        lua_thread.create(function ()
             searchWanted, searched, config.ui.window.searched[0] = true, {}, true
 
-            showNotification("info", u8("Составляю список преступников..."))
+            showNotification("info", "Составляю список преступников...")
             sendMJHelperMessage("Составляю список преступников...")
 
             for i = 1, 7 do
@@ -2089,25 +2084,25 @@ function main()
                 sendMJHelperMessage("Список преступников составлен!")
                 sendMJHelperMessage(string.format("Найдено преступников: %s", #searched))
             else
-                showNotification("error", u8("Список преступников пуст!"))
+                showNotification("error", "Список преступников пуст!")
                 sendMJHelperMessage("Список преступников пуст!")
             end
         end)
     end)
 
-    sampRegisterChatCommand("siren", function()
+    sampRegisterChatCommand("siren", function ()
         if isCharInAnyCar(PLAYER_PED) then
             local car = storeCarCharIsInNoSave(PLAYER_PED)
 
             if getDriverOfCar(car) ~= PLAYER_PED then
-                showNotification("error", u8("Вы должны быть водителем этого транспорта!"))
+                showNotification("error", "Вы должны быть водителем этого транспорта!")
                 return sendMJHelperMessage("Вы должны быть водителем этого транспорта!")
             end
 
             switchCarSiren(car, not isCarSirenOn(car))
             sendMJHelperMessage(string.format("Мигалки %s!", isCarSirenOn(car) and "включены" or "выключены"))
         else
-            showNotification("error", u8("Вы должны находиться в транспорте!"))
+            showNotification("error", "Вы должны находиться в транспорте!")
             sendMJHelperMessage("Вы должны находиться в транспорте!")
         end
     end)
@@ -2129,7 +2124,7 @@ function main()
     end
 end
 
-addEventHandler("onWindowMessage", function(msg, wp, lp)
+addEventHandler("onWindowMessage", function (msg, wp, lp)
     for _, window in pairs(config.ui.window) do
         if wp == 0x1B and window[0] then
             if msg == 0x100 then
