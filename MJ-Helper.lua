@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.3.1")
+script_version("5.0.3.2")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -1748,7 +1748,6 @@ imgui.OnFrame(
 
             imgui.End()
         end
-
         imgui.PopFont()
         imgui.PopStyleVar()
     end
@@ -2087,7 +2086,7 @@ function main()
             searchWanted = false
 
             if #searched ~= 0 then
-                showNotification("success", u8(string.format("Найдено преступников: %s", #searched)))
+                showNotification("success", string.format("Найдено преступников: %s", #searched))
                 sendMJHelperMessage("Список преступников составлен!")
                 sendMJHelperMessage(string.format("Найдено преступников: %s", #searched))
             else
