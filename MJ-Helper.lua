@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.3")
+script_version("5.0.3.1")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -387,22 +387,29 @@ end
 imgui.OnInitialize(function ()
     DarkTheme()
 
-    local config = imgui.ImFontConfig()
     local atlas = imgui.GetIO().Fonts
     local font_path = getWorkingDirectory() .. "\\resource\\fonts\\Eagle-Sans-Bold.ttf"
     local cyr_ranges = atlas:GetGlyphRangesCyrillic()
 
-    font = atlas:AddFontFromFileTTF(font_path, 16.0, nil, cyr_ranges)
-    bigFont = atlas:AddFontFromFileTTF(font_path, 20.0, nil, cyr_ranges)
-
-    config.MergeMode = true
-    config.PixelSnapH = true
     iconRanges = imgui.new.ImWchar[3](fa.min_range, fa.max_range, 0)
-    imgui.GetIO().Fonts:AddFontFromMemoryCompressedBase85TTF(fa.get_font_data_base85("solid"), 12, config, iconRanges)
+
+    local config16 = imgui.ImFontConfig()
+    config16.MergeMode = true
+    config16.PixelSnapH = true
+
+    font = atlas:AddFontFromFileTTF(font_path, 16.0, nil, cyr_ranges)
+    atlas:AddFontFromMemoryCompressedBase85TTF(fa.get_font_data_base85("solid"), 12.0, config16, iconRanges)
+
+    local config20 = imgui.ImFontConfig()
+    config20.MergeMode = true
+    config20.PixelSnapH = true
+
+    bigFont = atlas:AddFontFromFileTTF(font_path, 20.0, nil, cyr_ranges)
+    atlas:AddFontFromMemoryCompressedBase85TTF(fa.get_font_data_base85("solid"), 15.0, config20, iconRanges)
 
     local iconConfig = imgui.ImFontConfig()
     iconConfig.PixelSnapH = true
-    bigIcon = atlas:AddFontFromMemoryCompressedBase85TTF(fa.get_font_data_base85("solid"), 20, iconConfig, iconRanges)
+    bigIcon = atlas:AddFontFromMemoryCompressedBase85TTF(fa.get_font_data_base85("solid"), 20.0, iconConfig, iconRanges)
 
     imgui.GetIO().IniFilename = nil
 end)
