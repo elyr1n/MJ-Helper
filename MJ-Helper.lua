@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.3.3")
+script_version("5.0.4")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -32,7 +32,8 @@ local config = {
         bools = {
             redactMode = imgui.new.bool(false),
             autoBodyCam = imgui.new.bool(false),
-            autoTake = imgui.new.bool(false)
+            autoTake = imgui.new.bool(false),
+            autoPursuit = imgui.new.bool(false)
         },
 
         punishment = {
@@ -132,7 +133,7 @@ local text_for_departament = {
 }
 
 local afind = false
-local afindErrors = {"Команда доступна с 5 ранга", "Игрок находится в каком%-то здании", "Вы не полицейский !"}
+local afindErrors = {"^Команда доступна с 5 ранга", "^Игрок находится в каком%-то здании", "^Вы не полицейский !", "^Нельзя применить действие на администрации."}
 
 local moveSearchedWindow = false
 local settingsSearchedWindow = {
@@ -237,6 +238,7 @@ local saveConfig = function ()
         megafon = {config.ui.palitre.megafon[0], config.ui.palitre.megafon[1], config.ui.palitre.megafon[2]},
         autoBodyCam = config.ui.bools.autoBodyCam[0],
         autoTake = config.ui.bools.autoTake[0],
+        autoPursuit = config.ui.bools.autoPursuit[0],
         binds = binds,
         text_for_departament = text_for_departament
     }
@@ -259,22 +261,23 @@ local loadConfig = function ()
         local ok, parsed = pcall(json.decode, content)
 
         if ok and parsed then
-            wanteds = parsed.wanteds
-            federals = parsed.federals
-            administratives = parsed.administratives
-            notepad = parsed.notepad
-            logMessage = parsed.logMessage
-            settingsSearchedWindow = parsed.settingsSearchedWindow
-            timers = parsed.timers
-            binds = parsed.binds
-            text_for_departament = parsed.text_for_departament
+            wanteds = parsed.wanteds or {}
+            federals = parsed.federals or {}
+            administratives = parsed.administratives or {}
+            notepad = parsed.notepad or {}
+            logMessage = parsed.logMessage or false
+            settingsSearchedWindow = parsed.settingsSearchedWindow or settingsSearchedWindow
+            timers = parsed.timers or {}
+            binds = parsed.binds or binds
+            text_for_departament = parsed.text_for_departament or text_for_departament
 
-            config.ui.palitre.megafon[0] = parsed.megafon[1]
-            config.ui.palitre.megafon[1] = parsed.megafon[2]
-            config.ui.palitre.megafon[2] = parsed.megafon[3]
+            config.ui.palitre.megafon[0] = parsed.megafon[1] or 1.0
+            config.ui.palitre.megafon[1] = parsed.megafon[2] or 1.0
+            config.ui.palitre.megafon[2] = parsed.megafon[3] or 0.0
 
-            config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam
-            config.ui.bools.autoTake[0] = parsed.autoTake
+            config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam or false
+            config.ui.bools.autoTake[0] = parsed.autoTake or false
+            config.ui.bools.autoPursuit[0] = parsed.autoPursuit or false
         end
     end
 end
@@ -1056,6 +1059,10 @@ imgui.OnFrame(
                             saveConfig()
                         end)
 
+                        imgui.CheckboxHint(u8("Авто /pursuit"), config.ui.bools.autoPursuit, u8("После окончания /pursuit он автоматически будет прописываться заново"), function ()
+                            saveConfig()
+                        end)
+
                         imgui.EndTabItem()
                     end
 
@@ -1832,7 +1839,11 @@ sampev.onServerMessage = function (color, text)
         end
     end
 
-    if searchWanted and (textWithoutHex:find("Используй%: %/wanted %[уровень розыска 1%-6%]") or textWithoutHex:find("Игроков с таким уровнем розыска нету!")) then
+    if config.ui.bools.autoPursuit[0] and textWithoutHex:match("^Преследование за (.+) было прекращено%, причина%: время погони истекло%.") then
+        sampSendChat("/pursuit " .. pursuitID)
+    end
+
+    if searchWanted and (textWithoutHex:find("^Используй%: %/wanted %[уровень розыска 1%-6%]") or textWithoutHex:find("Игроков с таким уровнем розыска нету!")) then
         return false
     end
 
@@ -1844,11 +1855,11 @@ sampev.onServerMessage = function (color, text)
         return {hexToInt(newColor), newText}
     end
 
-    if bodyCamActive and textWithoutHex:find("Бодикамера уже активирована") then
+    if bodyCamActive and textWithoutHex:find("^Бодикамера уже активирована") then
         return false
     end
 
-    if not offerActive and textWithoutHex:find("Вам поступило предложение от") then
+    if not offerActive and textWithoutHex:find("^Вам поступило предложение от") then
         offerActive = true
 
         sampSendChat("/offer")
@@ -1926,10 +1937,11 @@ end
 
 function sampev.onSendCommand(command)
     takeID = command:match("^/take (.+)")
+    pursuitID = command:match("^/pursuit (.+)")
 end
 
 sampev.onSendDialogResponse = function (dialogId, button, listboxId, input)
-	if config.ui.bools.autoTake and dialogId == 88 and button == 1 then
+	if config.ui.bools.autoTake[0] and dialogId == 88 and button == 1 then
 		sampSendChat("/take " .. takeID)
 	end
 end
@@ -2012,18 +2024,16 @@ function main()
     switchingWindow("mj", config.ui.window.main)
 
     lua_thread.create(function ()
-        while true do
+        while true do wait(0)
             if afind then
                 sampSendChat("/find " .. targetID)
                 wait(2000)
-            else
-                wait(0)
             end
         end
     end)
 
     lua_thread.create(function ()
-        while true do
+        while true do wait(1000)
             if #timers ~= 0 then
                 for index, timer in pairs(timers) do
                     if timer.active then
@@ -2042,8 +2052,6 @@ function main()
                     end
                 end
             end
-
-            wait(1000)
         end
     end)
 
@@ -2052,7 +2060,7 @@ function main()
             if afind then
                 afind = false
 
-                showNotification("error", "/afind отключён!")
+                showNotification("success", "/afind отключён!")
                 return sendMJHelperMessage("/afind отключён!")
             end
 
