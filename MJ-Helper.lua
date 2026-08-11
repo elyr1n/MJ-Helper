@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.3.2")
+script_version("5.0.3.3")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -665,7 +665,7 @@ local OfferMenu = (function ()
         offer.alpha = offer.alpha + (targetAlpha - offer.alpha) * math.min(imgui.GetIO().DeltaTime * 12.0, 1.0)
 
         imgui.PushFont(font)
-        
+
         local titleW = imgui.CalcTextSize(u8(offer.title)).x
         local subW = imgui.CalcTextSize(u8(offer.subtitle)).x
         local contentW = math.max(titleW, subW)
@@ -1836,21 +1836,34 @@ sampev.onServerMessage = function (color, text)
         return false
     end
 
-    if textWithoutHex:find("^%[M%] (.+)") then
+    if textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:") then
+        local nickname, fraction, message = textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:")
         local newColor = string.format("%s", toHEX(config.ui.palitre.megafon[0] * 255, config.ui.palitre.megafon[1] * 255, config.ui.palitre.megafon[2] * 255))
-        local formattedText = text:gsub("^%[M%] (.+)", string.format("{%s}%s", newColor, text))
+        local newText = string.format("[M] [%s] %s: %s", fraction, nickname, message)
 
-        return {hexToInt(newColor), formattedText}
+        return {hexToInt(newColor), newText}
     end
 
-    if bodyCamActive and text:find("Бодикамера уже активирована") then
+    if bodyCamActive and textWithoutHex:find("Бодикамера уже активирована") then
         return false
     end
 
-    if not offerActive and text:find("Вам поступило предложение от") then
+    if not offerActive and textWithoutHex:find("Вам поступило предложение от") then
         offerActive = true
 
         sampSendChat("/offer")
+    end
+end
+
+function sampev.onPlayerChatBubble(playerId, color, distance, duration, message)
+    local textWithoutHex = message:gsub("{......}", "")
+
+    if textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:") then
+        local nickname, fraction, message = textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:")
+        local newColor = string.format("%s", toHEX(config.ui.palitre.megafon[0] * 255, config.ui.palitre.megafon[1] * 255, config.ui.palitre.megafon[2] * 255))
+        local newText = string.format("[M] [%s] %s: %s", fraction, nickname, message)
+
+        return {playerId, hexToInt(newColor), distance, duration, newText}
     end
 end
 
@@ -1879,12 +1892,12 @@ sampev.onShowDialog = function (dialogId, style, title, button1, button2, text)
     end
 
     if offerActive then
-        if dialogId == 25688 then
+        if dialogId == 25685 then
             sampSendDialogResponse(dialogId, 1, 0, "")
             return false
         end
 
-        if dialogId == 25689 then
+        if dialogId == 25686 then
             for line in textWithoutHex:gmatch("[^\n]+") do
                 if line:match("%[1%] Отправил предложение%: (.+)") then nickname = line:match("%[1%] Отправил предложение%: (.+)") end
                 if line:match("%[2%] Суть предложения%: (.+)") then action = line:match("%[2%] Суть предложения%: (.+)") end
@@ -1912,9 +1925,7 @@ sampev.onShowDialog = function (dialogId, style, title, button1, button2, text)
 end
 
 function sampev.onSendCommand(command)
-    if command:match("^/take (.+)") then
-        takeID = command:match("^/take (.+)")
-    end
+    takeID = command:match("^/take (.+)")
 end
 
 sampev.onSendDialogResponse = function (dialogId, button, listboxId, input)
