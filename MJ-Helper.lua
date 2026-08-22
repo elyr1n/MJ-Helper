@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.4")
+script_version("5.0.4.1")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -1859,7 +1859,7 @@ sampev.onServerMessage = function (color, text)
         return false
     end
 
-    if not offerActive and textWithoutHex:find("^Вам поступило предложение от") then
+    if not offerActive and textWithoutHex:match("^%[Новое предложение%] Предложение перестанет быть активным через 60 секунд%.") then
         offerActive = true
 
         sampSendChat("/offer")
