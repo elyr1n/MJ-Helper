@@ -1895,7 +1895,7 @@ end
 sampev.onShowDialog = function (dialogId, style, title, button1, button2, text)
     local textWithoutHex = text:gsub("{......}", "")
 
-    if dialogId == 1780 and searchedWanted then
+    if searchedWanted and dialogId == 1780 then
         for line in textWithoutHex:gmatch("[^\n]+") do
             local nickname, id, level, distance = line:match("(.+)%((%d+)%)%s+(%d) уровень%s+%[(.+)%]")
 
