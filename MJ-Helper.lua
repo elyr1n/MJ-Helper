@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("6.0.1")
+script_version("6.0.2")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -34,7 +34,8 @@ local config = {
             autoBodyCam = imgui.new.bool(false),
             autoTake = imgui.new.bool(false),
             autoPursuit = imgui.new.bool(false),
-            offEffectPursuit = imgui.new.bool(false)
+            offEffectPursuit = imgui.new.bool(false),
+            customMegaphone = imgui.new.bool(false)
         },
 
         punishment = {
@@ -246,6 +247,7 @@ local saveConfig = function ()
         autoTake = config.ui.bools.autoTake[0],
         autoPursuit = config.ui.bools.autoPursuit[0],
         offEffectPursuit = config.ui.bools.offEffectPursuit[0],
+        customMegaphone = config.ui.bools.customMegaphone[0],
         binds = binds,
         text_for_departament = text_for_departament
     }
@@ -286,6 +288,7 @@ local loadConfig = function ()
             config.ui.bools.autoTake[0] = parsed.autoTake or false
             config.ui.bools.autoPursuit[0] = parsed.autoPursuit or false
             config.ui.bools.offEffectPursuit[0] = parsed.offEffectPursuit or false
+            config.ui.bools.customMegaphone[0] = parsed.customMegaphone or false
         end
     end
 end
@@ -300,20 +303,6 @@ local toHEX = function (r, g, b)
     end
 
     return string.format("%02X%02X%02X", clamp(r), clamp(g), clamp(b))
-end
-
-local hexToInt = function (hex)
-    local r = tonumber(hex:sub(1, 2), 16)
-    local g = tonumber(hex:sub(3, 4), 16)
-    local b = tonumber(hex:sub(5, 6), 16)
-
-    local color = bit.bor(bit.lshift(r, 24), bit.lshift(g, 16), bit.lshift(b, 8), 0xFF)
-
-    if color >= 0x80000000 then
-        color = color - 0x100000000
-    end
-
-    return color
 end
 
 local keyNames = function (keys)
@@ -1072,6 +1061,10 @@ imgui.OnFrame(
                         end)
 
                         imgui.CheckboxHint(u8("Отключение эффектов от /pursuit"), config.ui.bools.offEffectPursuit, u8("При включении/выключении /pursuit эффекты от него выключатся"), function ()
+                            saveConfig()
+                        end)
+
+                        imgui.CheckboxHint(u8("Старый стиль мегафона"), config.ui.bools.customMegaphone, u8("При включении старый стиль мегафона (желтого цвета) восстановится\nПри этом, можно будет сменить цвет мегафона"), function ()
                             saveConfig()
                         end)
 
@@ -1859,8 +1852,8 @@ sampev.onServerMessage = function (color, text)
         return false
     end
 
-    if textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.*)") then
-        local nickname, fraction, message = textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.*)")
+    if config.ui.bools.customMegaphone[0] and textWithoutHex:match("^:u1f7e5::u1f7e6: (.+) %[(.+)%]: (.*)") then
+        local nickname, fraction, message = textWithoutHex:match("^:u1f7e5::u1f7e6: (.+) %[(.+)%]: (.*)")
         local newColor = string.format("%s", toHEX(config.ui.palitre.megafon[0] * 255, config.ui.palitre.megafon[1] * 255, config.ui.palitre.megafon[2] * 255))
         local newText = string.format("{%s}[M] [%s] %s: %s", newColor, fraction, nickname, message)
 
