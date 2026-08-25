@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("5.0.4.1")
+script_version("6.0.0")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -33,7 +33,8 @@ local config = {
             redactMode = imgui.new.bool(false),
             autoBodyCam = imgui.new.bool(false),
             autoTake = imgui.new.bool(false),
-            autoPursuit = imgui.new.bool(false)
+            autoPursuit = imgui.new.bool(false),
+            offEffectPursuit = imgui.new.bool(false)
         },
 
         punishment = {
@@ -133,7 +134,12 @@ local text_for_departament = {
 }
 
 local afind = false
-local afindErrors = {"^Команда доступна с 5 ранга", "^Игрок находится в каком%-то здании", "^Вы не полицейский !", "^Нельзя применить действие на администрации."}
+local afindErrors = {
+    "^%[Ошибка%] Команда доступна с 5 ранга",
+    "^%[Ошибка%] Игрок находится в каком%-то здании",
+    "^%[Ошибка%] Нельзя применить действие на администрации.",
+    "^%[Ошибка%] Вы не на дежурстве"
+}
 
 local moveSearchedWindow = false
 local settingsSearchedWindow = {
@@ -239,6 +245,7 @@ local saveConfig = function ()
         autoBodyCam = config.ui.bools.autoBodyCam[0],
         autoTake = config.ui.bools.autoTake[0],
         autoPursuit = config.ui.bools.autoPursuit[0],
+        offEffectPursuit = config.ui.bools.offEffectPursuit[0],
         binds = binds,
         text_for_departament = text_for_departament
     }
@@ -278,6 +285,7 @@ local loadConfig = function ()
             config.ui.bools.autoBodyCam[0] = parsed.autoBodyCam or false
             config.ui.bools.autoTake[0] = parsed.autoTake or false
             config.ui.bools.autoPursuit[0] = parsed.autoPursuit or false
+            config.ui.bools.offEffectPursuit[0] = parsed.offEffectPursuit or false
         end
     end
 end
@@ -1063,6 +1071,10 @@ imgui.OnFrame(
                             saveConfig()
                         end)
 
+                        imgui.CheckboxHint(u8("Отключение эффектов от /pursuit"), config.ui.bools.offEffectPursuit, u8("При включении/выключении /pursuit эффекты от него выключатся"), function ()
+                            saveConfig()
+                        end)
+
                         imgui.EndTabItem()
                     end
 
@@ -1843,19 +1855,21 @@ sampev.onServerMessage = function (color, text)
         sampSendChat("/pursuit " .. pursuitID)
     end
 
-    if searchWanted and (textWithoutHex:find("^Используй%: %/wanted %[уровень розыска 1%-6%]") or textWithoutHex:find("Игроков с таким уровнем розыска нету!")) then
+    if searchWanted and (textWithoutHex:find("^%[Ошибка%] Используй%: %/wanted %[уровень розыска 1%-6%]") or textWithoutHex:find("^%[Ошибка%] Игроков с таким уровнем розыска нету!")) then
         return false
     end
 
-    if textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:") then
-        local nickname, fraction, message = textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:")
+    if textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.*)") then
+        local nickname, fraction, message = textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.*)")
         local newColor = string.format("%s", toHEX(config.ui.palitre.megafon[0] * 255, config.ui.palitre.megafon[1] * 255, config.ui.palitre.megafon[2] * 255))
-        local newText = string.format("[M] [%s] %s: %s", fraction, nickname, message)
+        local newText = string.format("{%s}[M] [%s] %s: %s", newColor, fraction, nickname, message)
 
-        return {hexToInt(newColor), newText}
+        sampAddChatMessage(newText, "0x" .. newColor)
+
+        return false
     end
 
-    if bodyCamActive and textWithoutHex:find("^Бодикамера уже активирована") then
+    if bodyCamActive and textWithoutHex:find("^%[Ошибка%] Бодикамера уже активирована") then
         return false
     end
 
@@ -1881,9 +1895,9 @@ end
 sampev.onShowDialog = function (dialogId, style, title, button1, button2, text)
     local textWithoutHex = text:gsub("{......}", "")
 
-    if dialogId == 1780 and searchWanted then
+    if dialogId == 1780 then
         for line in textWithoutHex:gmatch("[^\n]+") do
-            local nickname, id, level, distance = line:match("(%w+_%w+)%((%d+)%)%s+(%d) уровень%s+%[(.+)%]")
+            local nickname, id, level, distance = line:match("(.+)%((%d+)%)%s+(%d) уровень%s+%[(.+)%]")
 
             if nickname and id and level and distance then
                 if distance:find("в интерьере") then
@@ -1935,7 +1949,7 @@ sampev.onShowDialog = function (dialogId, style, title, button1, button2, text)
     end
 end
 
-function sampev.onSendCommand(command)
+sampev.onSendCommand = function (command)
     takeID = command:match("^/take (.+)")
     pursuitID = command:match("^/pursuit (.+)")
 end
@@ -1969,6 +1983,24 @@ local hi = function ()
     print("/mj - меню основного функционала скрипта")
 end
 
+addEventHandler("onReceivePacket", function (id, bs)
+    if id == 220 then
+        raknetBitStreamIgnoreBits(bs, 8)
+        if raknetBitStreamReadInt8(bs) == 16 then
+            raknetBitStreamIgnoreBits(bs, 32)
+            local length = raknetBitStreamReadInt16(bs)
+            local encoded = raknetBitStreamReadInt8(bs)
+            if length > 0 then
+                local text = (encoded ~= 0) and raknetBitStreamDecodeString(bs, length + encoded) or raknetBitStreamReadString(bs, length)
+
+                if config.ui.bools.offEffectPursuit[0] and (text:find("frontend/effects/effect_damage2/index.html") or text:find("frontend/effects/effect_blood_pulse/index.html")) then
+                    return false
+                end
+            end
+        end
+    end
+end)
+
 local hotkeys = function ()
     hotkey.RegisterHotKey("mainWindow", false, decodeJson(binds.mainWindow), function ()
         if not sampIsCursorActive() and not sampIsDialogActive() then
@@ -1985,6 +2017,7 @@ local hotkeys = function ()
     end)
 
     hotkey.RegisterHotKey("offerAccept", false, decodeJson(binds.offerAccept), function ()
+        sampAddChatMessage(1, -1)
         if not sampIsCursorActive() and not sampIsDialogActive() then
             OfferMenu.triggerAccept()
         end
@@ -2150,14 +2183,16 @@ function main()
 end
 
 addEventHandler("onWindowMessage", function (msg, wp, lp)
-    for _, window in pairs(config.ui.window) do
-        if wp == 0x1B and window[0] then
-            if msg == 0x100 then
-                consumeWindowMessage(true, false)
-            end
+    for name, window in pairs(config.ui.window) do
+        if name ~= "searched" then
+            if wp == 0x1B and window[0] then
+                if msg == 0x100 then
+                    consumeWindowMessage(true, false)
+                end
 
-            if msg == 0x101 then
-                window[0] = false
+                if msg == 0x101 then
+                    window[0] = false
+                end
             end
         end
     end
