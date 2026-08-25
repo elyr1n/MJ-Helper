@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("6.0.0")
+script_version("6.0.1")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -1877,18 +1877,6 @@ sampev.onServerMessage = function (color, text)
         offerActive = true
 
         sampSendChat("/offer")
-    end
-end
-
-function sampev.onPlayerChatBubble(playerId, color, distance, duration, message)
-    local textWithoutHex = message:gsub("{......}", "")
-
-    if textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:") then
-        local nickname, fraction, message = textWithoutHex:match("^%[:u1f7e5::u1f7e6:%] (.+)%[(.+)%]: (.+):u203c:")
-        local newColor = string.format("%s", toHEX(config.ui.palitre.megafon[0] * 255, config.ui.palitre.megafon[1] * 255, config.ui.palitre.megafon[2] * 255))
-        local newText = string.format("[M] [%s] %s: %s", fraction, nickname, message)
-
-        return {playerId, hexToInt(newColor), distance, duration, newText}
     end
 end
 
