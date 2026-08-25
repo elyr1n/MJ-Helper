@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("6.0.2")
+script_version("6.0.3")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -1876,7 +1876,7 @@ end
 sampev.onShowDialog = function (dialogId, style, title, button1, button2, text)
     local textWithoutHex = text:gsub("{......}", "")
 
-    if searchedWanted and dialogId == 1780 then
+    if searchWanted and dialogId == 1780 then
         for line in textWithoutHex:gmatch("[^\n]+") do
             local nickname, id, level, distance = line:match("(.+)%((%d+)%)%s+(%d) уровень%s+%[(.+)%]")
 
