@@ -3,7 +3,7 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("6.0.3")
+script_version("6.0.3.1")
 
 local fa = require("fAwesome6")
 local effil = require("effil")
@@ -1998,15 +1998,11 @@ local hotkeys = function ()
     end)
 
     hotkey.RegisterHotKey("offerAccept", false, decodeJson(binds.offerAccept), function ()
-        if not sampIsCursorActive() and not sampIsDialogActive() then
-            OfferMenu.triggerAccept()
-        end
+        OfferMenu.triggerAccept()
     end)
 
     hotkey.RegisterHotKey("offerDecline", false, decodeJson(binds.offerDecline), function ()
-        if not sampIsCursorActive() and not sampIsDialogActive() then
-            OfferMenu.triggerDecline()
-        end
+        OfferMenu.triggerDecline()
     end)
 
     hotkey.RegisterHotKey("searchedWindow", false, decodeJson(binds.searchedWindow), function ()
