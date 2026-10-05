@@ -3,16 +3,14 @@
 script_author("elyrin")
 script_name("MJ-Helper")
 script_properties("work-in-pause")
-script_version("6.0.3.1")
 
 local fa = require("fAwesome6")
-local effil = require("effil")
 local vkeys = require("vkeys")
 local sampev = require("samp.events")
 local json = require("dkjson")
 local ffi = require("ffi")
 local imgui = require("mimgui")
-local hotkey = require("mimgui_hotkeys")
+local hotkey = require("mimhotkey")
 local encoding = require("encoding")
 encoding.default = "CP1251"
 local u8 = encoding.UTF8
@@ -148,15 +146,6 @@ local settingsSearchedWindow = {
     y = 540
 }
 
-local updateUrls = {
-    "https://raw.githubusercontent.com/elyr1n/MJ-Helper/refs/heads/main/update.json",
-    "https://github.com/elyr1n/MJ-Helper/raw/refs/heads/main/MJ-Helper.lua"
-}
-local update = {
-    version = "",
-    text = ""
-}
-
 local renderFont = renderCreateFont("Verdana", 10, 1 + 8)
 local config_path = getWorkingDirectory() .. "\\config\\MJ-Helper.json"
 
@@ -166,71 +155,6 @@ local sendMJHelperMessage = function (text)
     end
 
     sampAddChatMessage(string.format("[MJ-Helper]: {FFFFFF}%s", text), 0xff4f00)
-end
-
-local asyncHttpRequest = function (method, url, args, resolve, reject)
-    local request_thread = effil.thread(function (method, url, args)
-        local requests = require("requests")
-        local ok, response = pcall(requests.request, method, url, args)
-        if ok then
-            response.json, response.xml = nil, nil
-            return true, response
-        end
-        return false, response
-    end)(method, url, args)
-
-    if not resolve then resolve = function() end end
-    if not reject then reject = function() end end
-
-    lua_thread.create(function()
-        while true do
-            local status, err = request_thread:status()
-            if err then return reject(err) end
-
-            if status == "completed" then
-                local ok, response = request_thread:get()
-                if ok then
-                    resolve(response)
-                else
-                    reject(response)
-                end
-                return
-            end
-
-            if status == "canceled" then
-                return reject("canceled")
-            end
-
-            wait(0)
-        end
-    end)
-end
-
-local check_update = function ()
-    asyncHttpRequest(
-        "GET",
-        updateUrls[1],
-        {},
-
-        function (response)
-            local status, data = pcall(json.decode, response.text)
-
-            if status and type(data) == "table" and data.version and data.text then
-                local version, text = data.version, data.text
-
-                if version ~= thisScript().version then
-                    update.version = version
-                    update.text = text
-
-                    config.ui.window.update[0] = not config.ui.window.update[0]
-                else
-                    sendMJHelperMessage("Скрипт обновлён до последней версии!")
-                end
-            else
-                sendMJHelperMessage("Ошибка при проверке обновления скрипта!")
-            end
-        end
-    )
 end
 
 local saveConfig = function ()
@@ -759,16 +683,13 @@ local OfferMenu = (function ()
 end)()
 
 local showHotkey = function (key, text)
-    if hotkey.ShowHotKey(key) then
-        binds[key] = encodeJson(hotkey.GetHotKey(key))
+    local newKey = hotkey.KeyEditor(key, u8(text))
+
+    if newKey then
+        binds[key] = encodeJson(newKey)
 
         saveConfig()
     end
-
-    imgui.SameLine()
-
-    imgui.SetCursorPosX(imgui.GetCursorPosX() - 2.5)
-    imgui.Text(u8("- " .. text))
 
     imgui.Separator()
 end
@@ -797,6 +718,11 @@ imgui.OnFrame(
             imgui.Separator()
             NavButton(u8"Настройки", 4, activeTab)
             imgui.Separator()
+
+            imgui.SetCursorPos(imgui.ImVec2(5, 365))
+            if imgui.Button(fa["PAPER_PLANE"] .. u8(" ТГК (ВАЖНО)")) then
+                os.execute('start "" https://t.me/fakezoff')
+            end
 
             imgui.EndChild()
 
@@ -1765,53 +1691,6 @@ imgui.OnFrame(
     end
 )
 
-imgui.OnFrame(
-    function() return config.ui.window.update[0] or ui.update > 0.0 end,
-    function()
-        local alpha = HandleWindowAlpha(config.ui.window.update[0], "update")
-        imgui.PushStyleVarFloat(imgui.StyleVar.Alpha, alpha)
-
-        local resX, resY = getScreenResolution()
-        imgui.SetNextWindowPos(imgui.ImVec2(resX / 2, resY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-
-        imgui.PushFont(font)
-        if imgui.Begin(u8(string.format("Обновление [%s ver.]", update.version)), _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize) then
-            imgui.Text(u8("Изменения:"))
-
-            imgui.Separator()
-
-            for line in update.text:gmatch("[^\n]+") do
-                imgui.BulletText(u8(line))
-            end
-
-            imgui.Separator()
-
-            if AnimButton(u8("Обновить"), imgui.ImVec2(imgui.GetContentRegionAvail().x / 2 - 5, 35)) then
-                sendMJHelperMessage("Скачиваю обновление...")
-
-                downloadUrlToFile(updateUrls[2], thisScript().path, function (id, status)
-                    if status == 6 then
-                        sendMJHelperMessage("Обновление успешно завершено!")
-                        sendMJHelperMessage("Скрипт перезагрузится для применения изменений!")
-                    end
-                end)
-
-                config.ui.window.update[0] = not config.ui.window.update[0]
-            end
-
-            imgui.SameLine()
-
-            if AnimButton(u8("Отмена"), imgui.ImVec2(imgui.GetContentRegionAvail().x, 35)) then
-                config.ui.window.update[0] = not config.ui.window.update[0]
-            end
-
-            imgui.End()
-        end
-        imgui.PopFont()
-        imgui.PopStyleVar()
-    end
-)
-
 local registerCommandWithArgument = function (command, window)
     sampRegisterChatCommand(command, function (id)
         if #id == 0 then
@@ -1962,6 +1841,9 @@ local hi = function ()
     print("/log - переключение вывода сообщений в консоль")
     print("/siren - переключение сирены")
     print("/mj - меню основного функционала скрипта")
+
+    sendMJHelperMessage("Обновления скрипта в телеграм боте - https://t.me/nelsontoolsbot")
+    sendMJHelperMessage("Поддержи создателя подпиской - https://t.me/fakezoff")
 end
 
 addEventHandler("onReceivePacket", function (id, bs)
@@ -1983,13 +1865,13 @@ addEventHandler("onReceivePacket", function (id, bs)
 end)
 
 local hotkeys = function ()
-    hotkey.RegisterHotKey("mainWindow", false, decodeJson(binds.mainWindow), function ()
+    hotkey.RegisterCallback("mainWindow", decodeJson(binds.mainWindow), function ()
         if not sampIsCursorActive() and not sampIsDialogActive() then
             config.ui.window.main[0] = not config.ui.window.main[0]
         end
     end)
 
-    hotkey.RegisterHotKey("siren", false, decodeJson(binds.siren), function ()
+    hotkey.RegisterCallback("siren", decodeJson(binds.siren), function ()
         if not sampIsCursorActive() and not sampIsDialogActive() then
             if isCharInAnyCar(PLAYER_PED) and getDriverOfCar(storeCarCharIsInNoSave(PLAYER_PED)) == PLAYER_PED then
                 sampProcessChatInput("/siren")
@@ -1997,15 +1879,19 @@ local hotkeys = function ()
         end
     end)
 
-    hotkey.RegisterHotKey("offerAccept", false, decodeJson(binds.offerAccept), function ()
-        OfferMenu.triggerAccept()
+    hotkey.RegisterCallback("offerAccept", decodeJson(binds.offerAccept), function ()
+        if not sampIsCursorActive() and not sampIsDialogActive() then
+            OfferMenu.triggerAccept()
+        end
     end)
 
-    hotkey.RegisterHotKey("offerDecline", false, decodeJson(binds.offerDecline), function ()
-        OfferMenu.triggerDecline()
+    hotkey.RegisterCallback("offerDecline", decodeJson(binds.offerDecline), function ()
+        if not sampIsCursorActive() and not sampIsDialogActive() then
+            OfferMenu.triggerDecline()
+        end
     end)
 
-    hotkey.RegisterHotKey("searchedWindow", false, decodeJson(binds.searchedWindow), function ()
+    hotkey.RegisterCallback("searchedWindow", decodeJson(binds.searchedWindow), function ()
         if config.ui.window.searched[0] then
             moveSearchedWindow = not moveSearchedWindow
         end
@@ -2018,8 +1904,6 @@ function main()
 
     loadConfig()
     saveConfig()
-
-    check_update()
 
     hi()
 
